@@ -1,0 +1,1 @@
+785245057076.dkr.ecr.us-west-2.amazonaws.com/calc_lambda
