@@ -8,6 +8,7 @@ import lombok.Setter;
 import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 @Data
 public class StateManager {
@@ -15,12 +16,14 @@ public class StateManager {
     // This will be offloaded to Dynamo
     @Getter(AccessLevel.PRIVATE)
     @Setter(AccessLevel.PRIVATE)
-    private static Performer       perf1      = new Performer(1);
+    private static Performer perf1 = new Performer(1);
 
-    private List<Performer> performers = List.of(perf1, new Performer(2));
+    private List<Performer>   performers   = List.of(perf1, new Performer(2));
     private List<Performance> performances = List.of(new Performance(1, "asdf",
                     Collections.emptyList(),
-                    Collections.singletonList(new Audition(perf1, ZonedDateTime.now().plusDays(10)))),
+                    Collections.singletonList(new Audition(new Random().nextLong(),
+                            perf1,
+                            ZonedDateTime.now().plusDays(10)))),
             new Performance());
 
     public Performer getPerformerById(long id) {
