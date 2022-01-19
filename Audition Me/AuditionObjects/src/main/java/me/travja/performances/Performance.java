@@ -16,4 +16,8 @@ public class Performance {
     private List<ZonedDateTime> performanceDates;
     private List<Audition>      auditionList;
 
+    public void scheduleAudition(Performer performer, ZonedDateTime date) {
+        auditionList.add(new Audition(performer, date));
+    }
+
 }

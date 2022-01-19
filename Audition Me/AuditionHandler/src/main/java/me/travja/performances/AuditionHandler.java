@@ -5,18 +5,20 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class PerformanceHandler implements RequestHandler<Map<String, String>, Map<String, Object>> {
+// '/audition' endpoint
+public class AuditionHandler implements RequestHandler<Map<String, String>, Map<String, Object>> {
 
     private static DateTimeFormatter format       = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
+    private static Performer         perf1        = new Performer(1);
     // This will be offloaded to Dynamo
+    private static List<Performer>   performers   = List.of(perf1, new Performer(2));
     private static List<Performance> performances = List.of(new Performance(1, "asdf",
                     Collections.emptyList(),
-                    Collections.singletonList(new Audition(new Performer(1), ZonedDateTime.now().plusDays(10)))),
+                    Collections.singletonList(new Audition(perf1, ZonedDateTime.now().plusDays(10)))),
             new Performance());
 
     @Override
@@ -34,23 +36,24 @@ public class PerformanceHandler implements RequestHandler<Map<String, String>, M
     }
 
     public Map<String, Object> handleGet(Map<String, String> event, Context context) {
-        if (event.containsKey("id"))
-            return Map.of("statusCode", 200, "performance", getPerformanceById(Long.parseLong(event.get("id"))));
-
-        return Map.of("statusCode", 200, "performances", performances);
+        ensureExists(event, "id");
+        return Map.of("statusCode", 200, "auditionList", getPerformanceById(Long.parseLong(event.get("id"))).getAuditionList());
     }
 
 
     public Map<String, Object> handlePost(Map<String, String> event, Context context) {
-        ensureExists(event, "address");
-        ensureExists(event, "date");
+        ensureExists(event, "performanceId");
+        ensureExists(event, "performerId");
 
-        String        address = event.get("address");
-        ZonedDateTime date    = ZonedDateTime.parse(event.get("date"), format);
+        long performanceId = getLong(event, "performanceId");
+        long performerId   = getLong(event, "performerId");
 
-        performances.add(new Performance(1, address, Collections.singletonList(date), new ArrayList<>()));
+        Performance   performance = getPerformanceById(performanceId);
+        Performer     performer   = getPerformerById(performerId);
+        ZonedDateTime date        = ZonedDateTime.parse(event.get("date"), format);
 
-        return Map.of("statusCode", 200, "numPerformances", performances.size());
+        performance.scheduleAudition(performer, date);
+        return Map.of("statusCode", 200, "totalAuditions", performance.getAuditionList().size());
     }
 
     public Map<String, Object> handleDelete(Map<String, String> event, Context context) {
@@ -61,10 +64,20 @@ public class PerformanceHandler implements RequestHandler<Map<String, String>, M
         return Map.of("statusCode", 200, "numPerformances", performances.size());
     }
 
+    public Performer getPerformerById(long id) {
+        return performers.stream()
+                .filter(performer -> performer.getId() == id)
+                .findFirst().orElse(null);
+    }
+
     public Performance getPerformanceById(long id) {
         return performances.stream()
                 .filter(performance -> performance.getId() == id)
                 .findFirst().orElse(null);
+    }
+
+    public long getLong(Map<String, String> event, String key) {
+        return Long.parseLong(event.get(key));
     }
 
     public void ensureExists(Map<String, String> event, String key) {
