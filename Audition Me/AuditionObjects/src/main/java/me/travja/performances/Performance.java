@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Random;
 
 @Data
 @NoArgsConstructor
@@ -17,7 +18,13 @@ public class Performance {
     private List<Audition>      auditionList;
 
     public void scheduleAudition(Performer performer, ZonedDateTime date) {
-        auditionList.add(new Audition(performer, date));
+        auditionList.add(new Audition(new Random().nextLong(), performer, date));
+    }
+
+    public void removeAudition(long id) {
+        Audition aud = auditionList.stream().filter(audition -> audition.getId() == id).findFirst().orElse(null);
+        if (aud != null)
+            auditionList.remove(aud);
     }
 
 }

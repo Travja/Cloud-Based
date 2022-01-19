@@ -13,11 +13,7 @@ import java.util.Map;
 public class PerformanceHandler implements RequestHandler<Map<String, String>, Map<String, Object>> {
 
     private static DateTimeFormatter format       = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
-    // This will be offloaded to Dynamo
-    private static List<Performance> performances = List.of(new Performance(1, "asdf",
-                    Collections.emptyList(),
-                    Collections.singletonList(new Audition(new Performer(1), ZonedDateTime.now().plusDays(10)))),
-            new Performance());
+    private final StateManager state = new StateManager();
 
     @Override
     public Map<String, Object> handleRequest(Map<String, String> event, Context context) {
@@ -35,9 +31,9 @@ public class PerformanceHandler implements RequestHandler<Map<String, String>, M
 
     public Map<String, Object> handleGet(Map<String, String> event, Context context) {
         if (event.containsKey("id"))
-            return Map.of("statusCode", 200, "performance", getPerformanceById(Long.parseLong(event.get("id"))));
+            return Map.of("statusCode", 200, "performance", state.getPerformanceById(Long.parseLong(event.get("id"))));
 
-        return Map.of("statusCode", 200, "performances", performances);
+        return Map.of("statusCode", 200, "performances", state.getPerformances());
     }
 
 
@@ -48,24 +44,19 @@ public class PerformanceHandler implements RequestHandler<Map<String, String>, M
         String        address = event.get("address");
         ZonedDateTime date    = ZonedDateTime.parse(event.get("date"), format);
 
-        performances.add(new Performance(1, address, Collections.singletonList(date), new ArrayList<>()));
+        state.getPerformances().add(new Performance(1, address, Collections.singletonList(date), new ArrayList<>()));
 
-        return Map.of("statusCode", 200, "numPerformances", performances.size());
+        return Map.of("statusCode", 200, "numPerformances", state.getPerformances().size());
     }
 
     public Map<String, Object> handleDelete(Map<String, String> event, Context context) {
         ensureExists(event, "id");
 
-        Performance performance = getPerformanceById(Long.parseLong(event.get("id")));
-        performances.remove(performance);
-        return Map.of("statusCode", 200, "numPerformances", performances.size());
+        Performance performance = state.getPerformanceById(Long.parseLong(event.get("id")));
+        state.getPerformances().remove(performance);
+        return Map.of("statusCode", 200, "numPerformances", state.getPerformances().size());
     }
 
-    public Performance getPerformanceById(long id) {
-        return performances.stream()
-                .filter(performance -> performance.getId() == id)
-                .findFirst().orElse(null);
-    }
 
     public void ensureExists(Map<String, String> event, String key) {
         if (!event.containsKey(key))

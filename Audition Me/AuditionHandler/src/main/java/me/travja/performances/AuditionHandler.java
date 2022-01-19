@@ -13,13 +13,7 @@ import java.util.Map;
 public class AuditionHandler implements RequestHandler<Map<String, String>, Map<String, Object>> {
 
     private static DateTimeFormatter format       = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
-    private static Performer         perf1        = new Performer(1);
-    // This will be offloaded to Dynamo
-    private static List<Performer>   performers   = List.of(perf1, new Performer(2));
-    private static List<Performance> performances = List.of(new Performance(1, "asdf",
-                    Collections.emptyList(),
-                    Collections.singletonList(new Audition(perf1, ZonedDateTime.now().plusDays(10)))),
-            new Performance());
+    private final StateManager state = new StateManager();
 
     @Override
     public Map<String, Object> handleRequest(Map<String, String> event, Context context) {
@@ -37,7 +31,8 @@ public class AuditionHandler implements RequestHandler<Map<String, String>, Map<
 
     public Map<String, Object> handleGet(Map<String, String> event, Context context) {
         ensureExists(event, "id");
-        return Map.of("statusCode", 200, "auditionList", getPerformanceById(Long.parseLong(event.get("id"))).getAuditionList());
+        return Map.of("statusCode", 200, "auditionList",
+                state.getPerformanceById(Long.parseLong(event.get("id"))).getAuditionList());
     }
 
 
@@ -48,8 +43,8 @@ public class AuditionHandler implements RequestHandler<Map<String, String>, Map<
         long performanceId = getLong(event, "performanceId");
         long performerId   = getLong(event, "performerId");
 
-        Performance   performance = getPerformanceById(performanceId);
-        Performer     performer   = getPerformerById(performerId);
+        Performance   performance = state.getPerformanceById(performanceId);
+        Performer     performer   = state.getPerformerById(performerId);
         ZonedDateTime date        = ZonedDateTime.parse(event.get("date"), format);
 
         performance.scheduleAudition(performer, date);
@@ -58,23 +53,14 @@ public class AuditionHandler implements RequestHandler<Map<String, String>, Map<
 
     public Map<String, Object> handleDelete(Map<String, String> event, Context context) {
         ensureExists(event, "id");
+        ensureExists(event, "auditionId");
 
-        Performance performance = getPerformanceById(Long.parseLong(event.get("id")));
-        performances.remove(performance);
-        return Map.of("statusCode", 200, "numPerformances", performances.size());
+        Performance performance = state.getPerformanceById(Long.parseLong(event.get("id")));
+        performance.removeAudition(Long.parseLong(event.get("auditionId")));
+        return Map.of("statusCode", 200);
     }
 
-    public Performer getPerformerById(long id) {
-        return performers.stream()
-                .filter(performer -> performer.getId() == id)
-                .findFirst().orElse(null);
-    }
 
-    public Performance getPerformanceById(long id) {
-        return performances.stream()
-                .filter(performance -> performance.getId() == id)
-                .findFirst().orElse(null);
-    }
 
     public long getLong(Map<String, String> event, String key) {
         return Long.parseLong(event.get(key));
