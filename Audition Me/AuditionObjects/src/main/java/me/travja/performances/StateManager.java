@@ -8,6 +8,7 @@ import lombok.Setter;
 import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Random;
 
 @Data
@@ -23,19 +24,24 @@ public class StateManager {
                     Collections.emptyList(),
                     Collections.singletonList(new Audition(new Random().nextLong(),
                             perf1,
-                            ZonedDateTime.now().plusDays(10)))),
+                            ZonedDateTime.now().plusDays(10))),
+                    Collections.emptyList()),
             new Performance());
 
     public Performer getPerformerById(long id) {
         return performers.stream()
                 .filter(performer -> performer.getId() == id)
-                .findFirst().orElse(null);
+                .findFirst()
+                .orElseThrow(() ->
+                        new NoSuchElementException("Performer with ID '" + id + "' doesn't exist"));
     }
 
     public Performance getPerformanceById(long id) {
         return performances.stream()
                 .filter(performance -> performance.getId() == id)
-                .findFirst().orElse(null);
+                .findFirst()
+                .orElseThrow(() ->
+                        new NoSuchElementException("Performance with ID '" + id + "' doesn't exist"));
     }
 
 }

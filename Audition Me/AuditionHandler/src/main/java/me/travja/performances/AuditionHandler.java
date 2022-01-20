@@ -5,15 +5,16 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
+
+import static me.travja.performances.Util.ensureExists;
+import static me.travja.performances.Util.getLong;
 
 // '/audition' endpoint
 public class AuditionHandler implements RequestHandler<Map<String, String>, Map<String, Object>> {
 
-    private static DateTimeFormatter format       = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
-    private final StateManager state = new StateManager();
+    private static DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
+    private final  StateManager      state  = new StateManager();
 
     @Override
     public Map<String, Object> handleRequest(Map<String, String> event, Context context) {
@@ -58,16 +59,5 @@ public class AuditionHandler implements RequestHandler<Map<String, String>, Map<
         Performance performance = state.getPerformanceById(Long.parseLong(event.get("id")));
         performance.removeAudition(Long.parseLong(event.get("auditionId")));
         return Map.of("statusCode", 200);
-    }
-
-
-
-    public long getLong(Map<String, String> event, String key) {
-        return Long.parseLong(event.get(key));
-    }
-
-    public void ensureExists(Map<String, String> event, String key) {
-        if (!event.containsKey(key))
-            throw new RuntimeException("Missing `" + key + "` in request body.");
     }
 }

@@ -16,6 +16,12 @@ public class Performance {
     private String              address;
     private List<ZonedDateTime> performanceDates;
     private List<Audition>      auditionList;
+    private List<Performer>     performers;
+
+    public void cast(Performer performer) {
+        if (!performers.contains(performer))
+            performers.add(performer);
+    }
 
     public void scheduleAudition(Performer performer, ZonedDateTime date) {
         auditionList.add(new Audition(new Random().nextLong(), performer, date));

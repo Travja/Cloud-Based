@@ -5,15 +5,15 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
+
+import static me.travja.performances.Util.ensureExists;
 
 public class PerformanceHandler implements RequestHandler<Map<String, String>, Map<String, Object>> {
 
-    private static DateTimeFormatter format       = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
-    private final StateManager state = new StateManager();
+    private static DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
+    private final  StateManager      state  = new StateManager();
 
     @Override
     public Map<String, Object> handleRequest(Map<String, String> event, Context context) {
@@ -38,15 +38,33 @@ public class PerformanceHandler implements RequestHandler<Map<String, String>, M
 
 
     public Map<String, Object> handlePost(Map<String, String> event, Context context) {
-        ensureExists(event, "address");
-        ensureExists(event, "date");
+        ensureExists(event, "action");
+        String action = event.get("action");
 
-        String        address = event.get("address");
-        ZonedDateTime date    = ZonedDateTime.parse(event.get("date"), format);
+        if (action.equals("CREATE")) {
+            ensureExists(event, "address");
+            ensureExists(event, "date");
 
-        state.getPerformances().add(new Performance(1, address, Collections.singletonList(date), new ArrayList<>()));
+            String        address = event.get("address");
+            ZonedDateTime date    = ZonedDateTime.parse(event.get("date"), format);
 
-        return Map.of("statusCode", 200, "numPerformances", state.getPerformances().size());
+            state.getPerformances().add(new Performance(1, address, Collections.singletonList(date),
+                    Collections.emptyList(), Collections.emptyList()));
+
+            return Map.of("statusCode", 200, "numPerformances", state.getPerformances().size());
+        } else if (action.equals("CAST")) {
+            ensureExists(event, "performanceId");
+            ensureExists(event, "performerId");
+
+            Performance performance = state.getPerformanceById(Long.parseLong(event.get("performanceId")));
+            Performer   performer   = state.getPerformerById(Long.parseLong(event.get("performerId")));
+
+            performance.cast(performer);
+
+            return Map.of("statusCode", 200, "message", "Performer cast");
+        }
+
+        throw new IllegalArgumentException("Invalid action");
     }
 
     public Map<String, Object> handleDelete(Map<String, String> event, Context context) {
@@ -57,9 +75,4 @@ public class PerformanceHandler implements RequestHandler<Map<String, String>, M
         return Map.of("statusCode", 200, "numPerformances", state.getPerformances().size());
     }
 
-
-    public void ensureExists(Map<String, String> event, String key) {
-        if (!event.containsKey(key))
-            throw new RuntimeException("Missing `" + key + "` in request body.");
-    }
 }
