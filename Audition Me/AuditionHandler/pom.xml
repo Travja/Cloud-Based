@@ -15,6 +15,7 @@
         <lambda.main>me.travja.performances.AuditionHandler::handleRequest</lambda.main>
         <aws.id>785245057076</aws.id>
         <aws.region>us-west-2</aws.region>
+        <smtp.email>the.only.t.craft@gmail.com</smtp.email>
     </properties>
 
     <dependencies>

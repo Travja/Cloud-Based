@@ -9,9 +9,11 @@ docker build -t ${project.name}:${project.version} . -f aws/Dockerfile && \
 docker tag ${project.name}:${project.version} ${aws.id}.dkr.ecr.${aws.region}.amazonaws.com/${project.name}:${project.version} && \
 docker push ${aws.id}.dkr.ecr.${aws.region}.amazonaws.com/${project.name}:${project.version}
 
-aws lambda create-function --function-name ${project.name} \
+aws --output text lambda create-function --function-name ${project.name} \
   --role arn:aws:iam::${aws.id}:role/${project.name}-role \
   --package-type Image \
   --code ImageUri=${aws.id}.dkr.ecr.${aws.region}.amazonaws.com/${project.name}:${project.version} \
-|| aws lambda update-function-code --function-name ${project.name} \
+&& aws lambda update-function-configuration --function-name ${project.name} \
+    --environment "Variables={SMTP_EMAIL=${smtp.email}}" \
+|| aws --output text lambda update-function-code --function-name ${project.name} \
   --image-uri ${aws.id}.dkr.ecr.${aws.region}.amazonaws.com/${project.name}:${project.version}

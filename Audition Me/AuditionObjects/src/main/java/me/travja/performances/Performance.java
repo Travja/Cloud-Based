@@ -1,22 +1,50 @@
 package me.travja.performances;
 
-import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.Setter;
 
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Performance {
 
     @Setter(AccessLevel.PRIVATE) private long id;
+    private static                       long _id = 0;
 
-    private String              address;
-    private List<ZonedDateTime> performanceDates;
-    private List<Audition>      auditionList;
-    private List<Performer>     performers;
+    private String   title   = "No Title";
+    private String   address = "No Address";
+    @JsonSerialize(using = PersonSerializer.class)
+    private Director director;
+
+    @JsonSerialize(using = PersonSerializer.class)
+    private CastingDirector     castingDirector;
+    @JsonSerialize(contentUsing = ZonedDateTimeSerializer.class)
+    private List<ZonedDateTime> performanceDates = new ArrayList<>();
+    private List<Audition>      auditionList     = new ArrayList<>();
+    @JsonSerialize(contentUsing = PersonSerializer.class)
+    private List<Performer>     performers       = new ArrayList<>();
+
+    public Performance() {
+        this.id = _id++;
+    }
+
+    public Performance(String title, String address,
+                       Director director, CastingDirector castingDirector,
+                       List<ZonedDateTime> performanceDates, List<Performer> performers) {
+        this.id = _id++;
+        this.title = title;
+        this.address = address;
+        this.director = director;
+        this.castingDirector = castingDirector;
+        this.performanceDates = performanceDates;
+        this.performers = performers;
+    }
 
     public void cast(Performer performer) {
         if (!performers.contains(performer))

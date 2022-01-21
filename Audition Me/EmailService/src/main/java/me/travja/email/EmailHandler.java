@@ -68,8 +68,6 @@ public class EmailHandler implements RequestHandler<Map<String, String>, Map<Str
         try {
             AmazonSimpleEmailService client =
                     AmazonSimpleEmailServiceClientBuilder.standard()
-                            // Replace US_WEST_2 with the AWS Region you're using for
-                            // Amazon SES.
                             .withRegion(Regions.US_WEST_2).build();
             SendEmailRequest request = new SendEmailRequest()
                     .withDestination(new Destination().withToAddresses(to))
@@ -81,11 +79,7 @@ public class EmailHandler implements RequestHandler<Map<String, String>, Map<Str
                                             .withCharset("UTF-8").withData(body)))
                             .withSubject(new Content()
                                     .withCharset("UTF-8").withData(subject)))
-                    .withSource(from)
-                    // Comment or remove the next line if you are not using a
-                    // configuration set
-//                    .withConfigurationSetName(CONFIGSET)
-                    ;
+                    .withSource(from);
             client.sendEmail(request);
             System.out.println("Email sent!");
         } catch (Exception ex) {

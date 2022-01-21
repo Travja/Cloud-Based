@@ -9,9 +9,11 @@ docker build -t auditions:1.0-SNAPSHOT . -f aws/Dockerfile && \
 docker tag auditions:1.0-SNAPSHOT 785245057076.dkr.ecr.us-west-2.amazonaws.com/auditions:1.0-SNAPSHOT && \
 docker push 785245057076.dkr.ecr.us-west-2.amazonaws.com/auditions:1.0-SNAPSHOT
 
-aws lambda create-function --function-name auditions \
+aws --output text lambda create-function --function-name auditions \
   --role arn:aws:iam::785245057076:role/auditions-role \
   --package-type Image \
   --code ImageUri=785245057076.dkr.ecr.us-west-2.amazonaws.com/auditions:1.0-SNAPSHOT \
-|| aws lambda update-function-code --function-name auditions \
+&& aws lambda update-function-configuration --function-name auditions \
+    --environment "Variables={SMTP_EMAIL=the.only.t.craft@gmail.com}" \
+|| aws --output text lambda update-function-code --function-name auditions \
   --image-uri 785245057076.dkr.ecr.us-west-2.amazonaws.com/auditions:1.0-SNAPSHOT
