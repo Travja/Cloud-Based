@@ -1,9 +1,7 @@
 package me.travja.performances;
 
-public class CastingDirector extends Person {
+import lombok.AllArgsConstructor;
 
-    public CastingDirector() {
-        this.setName("Casting Director");
-    }
-
+@AllArgsConstructor
+public class CastingDirector extends Director {
 }

@@ -8,7 +8,10 @@ import lombok.Data;
 import lombok.Setter;
 
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,7 +22,12 @@ public class StateManager {
     private static StateManager instance;
 
     // This will be offloaded to Dynamo
-    private List<Performer>   performers   = new ArrayList<>(Arrays.asList(new Performer(), new Performer()));
+    private List<Performer>   performers   = new ArrayList<>(
+            Arrays.asList(
+                    new Performer("Travis Eggett"),
+                    new Performer("Chris Cantera") //Hey look, we're performers
+            )
+    );
     private List<Performance> performances = new ArrayList<>(Arrays.asList(new Performance(
                     "Swan Lake",
                     "111 East St.",
@@ -45,12 +53,15 @@ public class StateManager {
 
         instance.getPerformanceById(0).setAuditionList(new ArrayList(
                 Arrays.asList(
-                        new Audition(new Random().nextLong(),
-                                instance.getPerformerById(0),
-                                ZonedDateTime.now().plusDays(10)
+                        new Audition(instance.getPerformerById(0),
+                                ZonedDateTime.now().plusDays(-5)
                         )
                 )
         ));
+    }
+
+    public boolean hasPerformance(Performance performance) {
+        return getPerformanceById(performance.getId()) != null;
     }
 
     public Performer getPerformerById(long id) {
@@ -70,12 +81,17 @@ public class StateManager {
     }
 
     public Performance getPerformanceByName(String title) {
-        Pattern regex = Pattern.compile(".*" + title + ".*");
+        Pattern regex = Pattern.compile(".*" + title.toLowerCase() + ".*");
 
         return performances.stream().filter(perf -> {
-            Matcher matcher = regex.matcher(perf.getTitle());
+            Matcher matcher = regex.matcher(perf.getTitle().toLowerCase());
             return matcher.find();
         }).findFirst().orElse(null);
+    }
+
+    public void addPerformance(Performance performance) {
+        if (!hasPerformance(performance))
+            performances.add(performance);
     }
 
 }

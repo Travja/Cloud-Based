@@ -1,20 +1,22 @@
 package me.travja.performances;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Setter;
 
 @Data
+@AllArgsConstructor
 public class Person {
 
-    @Setter(AccessLevel.PRIVATE)
-    private        long   id;
     private static long   _id = 0;
-    private        String name, email, phone;
+    @Setter(AccessLevel.PRIVATE)
+    private final  long   id  = _id++;
+    private final  String name;
+    private        String email, phone;
 
-    public Person() {
-        this.id = _id++;
+    protected Person() {
+        this.name = "John Doe";
     }
 
 }
