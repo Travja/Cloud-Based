@@ -29,12 +29,12 @@ public abstract class AuditionRequestHandler implements RequestHandler<Map<Strin
                     return mapper.convertValue(handlePost(event, path), Map.class);
                 case "PATCH":
                     return mapper.convertValue(handlePatch(event, path), Map.class);
-                case "DEL":
+                case "DELETE":
                     return mapper.convertValue(handleDelete(event, path), Map.class);
             }
         } catch (Exception e) {
             System.out.println("Something went severely wrong..\n" + e.getMessage());
-            e.printStackTrace();
+            throw e;
         }
 
         throw new MethodNotSupportedException(method + " not supported on this endpoint");

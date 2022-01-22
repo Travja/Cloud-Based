@@ -8,10 +8,7 @@ import lombok.Data;
 import lombok.Setter;
 
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,8 +21,8 @@ public class StateManager {
     // This will be offloaded to Dynamo
     private List<Performer>   performers   = new ArrayList<>(
             Arrays.asList(
-                    new Performer("Travis Eggett"),
-                    new Performer("Chris Cantera") //Hey look, we're performers
+                    new Performer("Travis Eggett", "teggett@student.neumont.edu", "phone number"),
+                    new Performer("Chris Cantera", "ccantera@neumont.edu", "phone number") //Hey look, we're performers
             )
     );
     private List<Performance> performances = new ArrayList<>(Arrays.asList(new Performance(
@@ -51,17 +48,19 @@ public class StateManager {
         testModule.addSerializer(ZonedDateTime.class, new ZonedDateTimeSerializer());
         mapper.registerModule(testModule);
 
-        instance.getPerformanceById(0).setAuditionList(new ArrayList(
-                Arrays.asList(
-                        new Audition(instance.getPerformerById(0),
-                                ZonedDateTime.now().plusDays(-5)
+        instance.getPerformanceById(0).orElseThrow(() ->
+                        new NoSuchElementException("Performance with ID '0' doesn't exist"))
+                .setAuditionList(new ArrayList(
+                        Arrays.asList(
+                                new Audition(instance.getPerformerById(0),
+                                        ZonedDateTime.now().plusDays(-5)
+                                )
                         )
-                )
-        ));
+                ));
     }
 
     public boolean hasPerformance(Performance performance) {
-        return getPerformanceById(performance.getId()) != null;
+        return getPerformanceById(performance.getId()).isPresent();
     }
 
     public Performer getPerformerById(long id) {
@@ -72,12 +71,10 @@ public class StateManager {
                         new NoSuchElementException("Performer with ID '" + id + "' doesn't exist"));
     }
 
-    public Performance getPerformanceById(long id) {
+    public Optional<Performance> getPerformanceById(long id) {
         return performances.stream()
                 .filter(performance -> performance.getId() == id)
-                .findFirst()
-                .orElseThrow(() ->
-                        new NoSuchElementException("Performance with ID '" + id + "' doesn't exist"));
+                .findFirst();
     }
 
     public Performance getPerformanceByName(String title) {

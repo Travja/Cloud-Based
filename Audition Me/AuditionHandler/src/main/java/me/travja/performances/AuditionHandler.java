@@ -3,6 +3,7 @@ package me.travja.performances;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import static me.travja.performances.Util.*;
 
@@ -24,16 +25,26 @@ public class AuditionHandler extends AuditionRequestHandler {
             long performanceId = Long.parseLong(path[1]);
             long performerId   = Long.parseLong(path[2]);
 
-            Performance performance = state.getPerformanceById(performanceId);
-            Performer   performer   = state.getPerformerById(performerId);
-            Audition    audition    = performance.getAudition(performerId);
-            sendEmail(performer.getEmail(), "Audition Status", audition.getStatus());
-            return constructResponse("statusCode", 200, "message", "Email sent");
+            Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
+                    new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
+            Performer performer = state.getPerformerById(performerId);
+            Audition  audition  = performance.getAudition(performerId);
+            if (audition != null) {
+                sendEmail(performer, "Audition Status", audition.getStatus());
+                return constructResponse("statusCode", 200,
+                        "audition", audition,
+                        "message", "Email sent");
+            } else {
+                return constructResponse("statusCode", 200, "message", "No audition exists for that performer and " +
+                        "this performance");
+            }
         } else {
             try {
                 long id = Long.parseLong(path[0]);
                 return constructResponse("statusCode", 200, "auditionList",
-                        state.getPerformanceById(id).getAuditionList());
+                        state.getPerformanceById(id).orElseThrow(() ->
+                                        new NoSuchElementException("Performance with ID '" + id + "' doesn't exist"))
+                                .getAuditionList());
             } catch (NumberFormatException ex) {
                 throw new IllegalArgumentException("To get an audition list, use a proper integer id as the first " +
                         "path variable.");
@@ -50,9 +61,10 @@ public class AuditionHandler extends AuditionRequestHandler {
         long performanceId = getLong(event, "performanceId");
         long performerId   = getLong(event, "performerId");
 
-        Performance   performance = state.getPerformanceById(performanceId);
-        Performer     performer   = state.getPerformerById(performerId);
-        ZonedDateTime date        = ZonedDateTime.parse(event.get("date"), format);
+        Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
+                new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
+        Performer     performer = state.getPerformerById(performerId);
+        ZonedDateTime date      = ZonedDateTime.parse(event.get("date"), format);
 
         Audition audition = performance.scheduleAudition(performer, date);
         sendEmail(performance.getDirector(), "Someone signed up for an audition!", performer.getId() + " has signed up to " +
@@ -68,7 +80,9 @@ public class AuditionHandler extends AuditionRequestHandler {
         ensureExists(event, "id");
         ensureExists(event, "auditionId");
 
-        Performance performance = state.getPerformanceById(Long.parseLong(event.get("id")));
+        long performanceId = Long.parseLong(event.get("id"));
+        Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
+                new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
         performance.removeAudition(Long.parseLong(event.get("auditionId")));
         return constructResponse("statusCode", 200);
     }

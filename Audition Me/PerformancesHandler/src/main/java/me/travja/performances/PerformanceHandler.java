@@ -5,6 +5,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import static me.travja.performances.Util.ensureExists;
 import static me.travja.performances.Util.ensureNotNull;
@@ -35,7 +36,8 @@ public class PerformanceHandler extends AuditionRequestHandler {
 
         if (!action.trim().isEmpty())
             try {
-                return constructResponse("statusCode", 200, "performance", state.getPerformanceById(Long.parseLong(action)));
+                return constructResponse("statusCode", 200, "performance",
+                        state.getPerformanceById(Long.parseLong(action)).orElse(null));
             } catch (NumberFormatException e) {}
 
         return constructResponse("statusCode", 200, "performances", state.getPerformances().toArray());
@@ -67,8 +69,10 @@ public class PerformanceHandler extends AuditionRequestHandler {
 
             //TODO Get authenticated user as casting director. Ensure he owns the performance
 
-            Performance performance = state.getPerformanceById(Long.parseLong(event.get("performanceId")));
-            Performer   performer   = state.getPerformerById(Long.parseLong(event.get("performerId")));
+            long performanceId = Long.parseLong(event.get("performanceId"));
+            Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
+                    new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
+            Performer performer = state.getPerformerById(Long.parseLong(event.get("performerId")));
 
             performance.cast(performer);
 
@@ -84,7 +88,9 @@ public class PerformanceHandler extends AuditionRequestHandler {
         ensureNotNull("/{id}", id);
         //TODO Get authenticated user as director. Ensure he owns the performance
 
-        Performance performance = state.getPerformanceById(Long.parseLong(event.get("id")));
+        long performanceId = Long.parseLong(id);
+        Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
+                new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
         state.getPerformances().remove(performance);
         return constructResponse("statusCode", 200, "numPerformances", state.getPerformances().size());
     }

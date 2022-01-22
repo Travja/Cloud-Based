@@ -16,7 +16,7 @@ public class Performer extends Person {
     private List<Performance> pastPerformances    = new ArrayList<>();
 
     public Performer(String name) {
-        this(name, null, null);
+        this(name, "example@example.com", null);
     }
 
     public Performer(String name, String email, String phone) {
