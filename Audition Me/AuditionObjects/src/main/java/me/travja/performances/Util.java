@@ -5,17 +5,6 @@ import java.util.Optional;
 
 public class Util {
 
-    static {
-        setup();
-    }
-
-    private static String from;
-
-    public static void setup() {
-        from = Optional.ofNullable(System.getenv("SMTP_EMAIL"))
-                .orElse(null);
-    }
-
     public static long getLong(Map<String, String> event, String key) {
         return Long.parseLong(event.get(key));
     }
@@ -39,6 +28,8 @@ public class Util {
     }
 
     public static void sendEmail(String to, String subject, String body) {
+        String from = Optional.ofNullable(System.getenv("SMTP_EMAIL"))
+                .orElse(null);
         if (from == null)
             throw new RuntimeException("Cannot send email. Sender email is null");
         if (to == null || to.trim().isEmpty())

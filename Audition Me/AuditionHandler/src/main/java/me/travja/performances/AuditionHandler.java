@@ -67,10 +67,12 @@ public class AuditionHandler extends AuditionRequestHandler {
         ZonedDateTime date      = ZonedDateTime.parse(event.get("date"), format);
 
         Audition audition = performance.scheduleAudition(performer, date);
-        sendEmail(performance.getDirector(), "Someone signed up for an audition!", performer.getId() + " has signed up to " +
-                "audition for performance " + performanceId);
-        sendEmail(performance.getCastingDirector(), "Someone signed up for an audition!", performer.getId() +
-                " has signed up to audition for performance " + performanceId);
+        if (performance.getDirector() != null)
+            sendEmail(performance.getDirector(), "Someone signed up for an audition!", performer.getId() + " has signed up to " +
+                    "audition for performance " + performanceId);
+        if (performance.getCastingDirector() != null)
+            sendEmail(performance.getCastingDirector(), "Someone signed up for an audition!", performer.getId() +
+                    " has signed up to audition for performance " + performanceId);
         return constructResponse("statusCode", 200, "audition", audition,
                 "totalAuditions", performance.getAuditionList().size());
     }

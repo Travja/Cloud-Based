@@ -16,7 +16,6 @@ public abstract class AuditionRequestHandler implements RequestHandler<Map<Strin
 
     @Override
     public Map<String, Object> handleRequest(Map<String, String> event, Context context) {
-        Util.setup();
         String method  = event.getOrDefault("httpMethod", "none");
         String rawPath = event.getOrDefault("path", "");
         System.out.println("Raw Path is: '" + rawPath + "'");
