@@ -11,7 +11,7 @@ public class Util {
 
     private static String from;
 
-    private static void setup() {
+    public static void setup() {
         from = Optional.ofNullable(System.getenv("SMTP_EMAIL"))
                 .orElse(null);
     }

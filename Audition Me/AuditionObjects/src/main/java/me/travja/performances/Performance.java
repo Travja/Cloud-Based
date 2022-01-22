@@ -59,6 +59,7 @@ public class Performance {
 
         if (!cast.contains(performer)) {
             cast.add(performer);
+            performer.addCurrentPerformance(this);
             Util.sendEmail(performer, "You have been cast!",
                     "Congratulations! You have been cast in " +
                             getTitle() + "! We look forward to having you!");
