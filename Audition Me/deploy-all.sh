@@ -1,9 +1,11 @@
 mvn install -f AuditionObjects
 
-cd PerformancesHandler
-./deploy.sh
+cd Performances && \
+./deploy.sh && printf "\n\n\t\tPerformances deployed successfully\t\t\n\n\n" || \
+ printf "\n\n\t\tPerformances FAILURE\t\t\n\n\n"
 
-cd ../AuditionHandler
-./deploy.sh
+cd ../Auditions && \
+./deploy.sh && printf "\n\n\t\tAuditions deployed successfully\t\t\n\n\n" || \
+ printf "\n\n\t\tAudition FAILURE\t\t\n\n\n"
 
 cd ../
