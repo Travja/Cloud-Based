@@ -6,6 +6,7 @@ import me.travja.performances.api.models.Audition;
 import me.travja.performances.api.models.Performance;
 import me.travja.performances.api.models.Performer;
 import me.travja.performances.api.models.Person;
+import me.travja.performances.processor.LambdaController;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -15,6 +16,7 @@ import java.util.NoSuchElementException;
 import static me.travja.performances.api.Util.*;
 
 // '/audition' endpoint
+@LambdaController("performers")
 public class AuditionHandler extends AuditionRequestHandler {
 
     private static DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
