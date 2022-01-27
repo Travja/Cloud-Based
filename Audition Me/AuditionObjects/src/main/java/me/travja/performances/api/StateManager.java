@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
-import me.travja.performances.serializers.ZonedDateTimeSerializer;
 import me.travja.performances.api.models.*;
+import me.travja.performances.serializers.ZonedDateTimeSerializer;
 
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -21,20 +21,10 @@ public class StateManager {
     private static StateManager instance;
 
     // This will be offloaded to Dynamo
-    private List<Performer>   performers   = new ArrayList<>(
-            Arrays.asList(
-                    new Performer("Travis Eggett", "teggett@student.neumont.edu", "phone number"),
-                    new Performer("Chris Cantera", "ccantera@neumont.edu", "phone number") //Hey look, we're performers
-            )
-    );
-    private List<Performance> performances = new ArrayList<>(Arrays.asList(new Performance(
-                    "Swan Lake",
-                    "111 East St.",
-                    new Director(),
-                    new CastingDirector(),
-                    new ArrayList<>(Arrays.asList(ZonedDateTime.now().plusDays(10))),
-                    new ArrayList<>()),
-            new Performance()));
+    private List<Performer>       performers       = new ArrayList<>();
+    private List<Director>        directors        = new ArrayList<>();
+    private List<CastingDirector> castingDirectors = new ArrayList<>();
+    private List<Performance>     performances     = new ArrayList<>();
 
     public static StateManager getInstance() {
         if (instance == null) {
@@ -50,6 +40,21 @@ public class StateManager {
         testModule.addSerializer(ZonedDateTime.class, new ZonedDateTimeSerializer());
         mapper.registerModule(testModule);
 
+        save(new Performer("Travis Eggett", "teggett@student.neumont.edu", "phone number", "test"));
+        save(new Performer("Chris Cantera", "ccantera@neumont.edu", "phone number", "test2")); //Hey look, we're performers
+
+        performances.add(
+                new Performance(
+                        "Swan Lake",
+                        "111 East St.",
+                        save(new Director()),
+                        save(new CastingDirector()),
+                        new ArrayList<>(Arrays.asList(ZonedDateTime.now().plusDays(10))),
+                        new ArrayList<>()
+                )
+        );
+        performances.add(new Performance());
+
         instance.getPerformanceById(0).orElseThrow(() ->
                         new NoSuchElementException("Performance with ID '0' doesn't exist"))
                 .setAuditionList(new ArrayList(
@@ -59,6 +64,20 @@ public class StateManager {
                                 )
                         )
                 ));
+    }
+
+    public <T extends Person> T save(T person) {
+        if (person instanceof CastingDirector) {
+            castingDirectors.add((CastingDirector) person);
+        } else if (person instanceof Director) {
+            directors.add((Director) person);
+        } else if (person instanceof Performer) {
+            performers.add((Performer) person);
+        }
+
+        //TODO Save data off to Dynamo
+
+        return person;
     }
 
     public boolean hasPerformance(Performance performance) {
@@ -100,6 +119,17 @@ public class StateManager {
     public void addPerformance(Performance performance) {
         if (!hasPerformance(performance))
             performances.add(performance);
+    }
+
+    public Optional<Person> getByEmail(String email) {
+        List<Person> allPeople = new ArrayList<>();
+        allPeople.addAll(getPerformers());
+        allPeople.addAll(getDirectors());
+        allPeople.addAll(getCastingDirectors());
+
+        return allPeople.stream()
+                .filter(person -> person.getEmail().equalsIgnoreCase(email))
+                .findFirst();
     }
 
 }

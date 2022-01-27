@@ -75,4 +75,11 @@ public abstract class AuditionRequestHandler {
         return map;
     }
 
+    protected String getAuthHeader(Map<String, Object> event) {
+        if (event.containsKey("headers") && ((Map<String, String>) event.get("headers")).containsKey("Authorization"))
+            return ((Map<String, String>) event.get("headers")).get("Authorization");
+
+        return null;
+    }
+
 }

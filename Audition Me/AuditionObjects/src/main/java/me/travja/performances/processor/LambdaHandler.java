@@ -3,23 +3,27 @@ package me.travja.performances.processor;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import me.travja.performances.MethodNotSupportedException;
 import me.travja.performances.api.AuditionRequestHandler;
+import me.travja.performances.api.StateManager;
 import me.travja.performances.api.Util;
 import me.travja.performances.api.models.Person;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 // '/' endpoint
-public class LambdaHandler implements RequestHandler<Map<String, Object>, Map<String, Object>> {
+public class LambdaHandler
+        extends AuditionRequestHandler
+        implements RequestHandler<Map<String, Object>, Map<String, Object>> {
 
     public static final  String                              PACK     = "me.travja.performances";
     private static final String                              basePath = "api";
     private static final Map<String, AuditionRequestHandler> handlers = new HashMap<>();
     public static        ObjectMapper                        mapper   = Util.getMapper();
+    private final        StateManager                        state    = StateManager.getInstance();
 
     public LambdaHandler() {
         registerEvents(PACK);
@@ -64,42 +68,70 @@ public class LambdaHandler implements RequestHandler<Map<String, Object>, Map<St
 
         LinkedList<String> path = new LinkedList<>();
         path.addAll(List.of(rawPath.trim().isEmpty() ? new String[0] : rawPath.split("/")));
-        if (path.getFirst().trim().isEmpty()) path.removeFirst();
-        if (path.getLast().equalsIgnoreCase("{proxy+}")) path.removeLast();
-        if (path.getFirst().trim().equalsIgnoreCase(basePath)) path.removeFirst();
+        if (path.size() > 0 && path.getFirst().trim().isEmpty()) path.removeFirst();
+        if (path.size() > 0 && (path.getLast().equalsIgnoreCase("{proxy+}") || path.getLast().equalsIgnoreCase("{proxy}"))) {
+            path.removeLast();
+            LinkedList<String> proxyPath = new LinkedList<>();
+            proxyPath.addAll(List.of(((Map<String, String>) event.get("pathParameters")).get("proxy").split("/")));
+            if (proxyPath.size() > 0 && proxyPath.getFirst().trim().isEmpty())
+                proxyPath.removeFirst();
+            path.addAll(proxyPath);
+        }
+        if (path.size() > 0 && path.getFirst().trim().equalsIgnoreCase(basePath)) path.removeFirst();
 
-        String handleParam = (path.size() > 0 ? path.getFirst() : "base").toLowerCase();
+        String handleParam = (path.size() > 0 ? path.removeFirst() : "").toLowerCase();
         System.out.println("Handler Param is " + handleParam);
-        AuditionRequestHandler handler = getHandler(handleParam);
+        AuditionRequestHandler handler = getHandler(handlers.containsKey(handleParam) ? handleParam : "");
 
         if (handler != null) {
             String authHeader = getAuthHeader(event);
-            Person authUser   = getAuthUser(authHeader);
+            Person authUser   = authHeader != null ? getAuthUser(authHeader.replace("Basic ", "")) : null;
 
             try {
                 String[] pathArray = path.toArray(new String[0]);
                 System.out.println("Path is: '" + pathArray + "'");
-                return mapper.convertValue(handler.handleRequest(event, context, authUser, pathArray), Map.class);
+                if (event.containsKey("body") && event.get("body") != null) {
+                    if ((boolean) event.get("isBase64Encoded"))
+                        event.putAll((Map<String, Object>) mapper.readValue(Base64.getDecoder()
+                                        .decode((String) event.get("body")),
+                                Map.class));
+                    else
+                        event.putAll((Map<String, Object>) mapper.readValue((String) event.get("body"), Map.class));
+                }
+                return convert(handler.handleRequest(event, context, authUser, pathArray));
+            } catch (IOException ioe) {
+                return convert(constructResponse(400, "errorMessage", "Hit IOException when converting body.",
+                        "exception", ioe));
             } catch (Exception e) {
-                System.out.println("Something went severely wrong..\n" + e.getMessage());
-                throw e;
+                return convert(constructResponse(500, "errorMessage",
+                        "Something went severely wrong..    " + e.getMessage(),
+                        "exception", e));
             }
         }
 
-        throw new MethodNotSupportedException(event.getOrDefault("httpMethod", "GET")
-                + " not supported on this endpoint");
+        return convert(constructResponse(400, "errorMessage",
+                event.getOrDefault("httpMethod", "GET") + " not supported on this endpoint"));
+    }
+
+    private Map<String, Object> convert(Map<String, Object> map) {
+        return mapper.convertValue(map, Map.class);
     }
 
     protected String getAuthHeader(Map<String, Object> event) {
-        if (event.containsKey("headers") && ((Map<String, String>) event.get("headers")).containsKey("Authorization"))
-            return ((Map<String, String>) event.get("headers")).get("Authorization");
+        if (event == null || !event.containsKey("headers")) return null;
 
-        return null;
+        Map<String, String> headers = ((Map<String, String>) event.get("headers"));
+        if (headers == null || !headers.containsKey("Authorization")) return null;
+
+        return headers.get("Authorization");
     }
 
     protected Person getAuthUser(String authHeader) {
         //TODO Get valid user
-        return null;
+        String[]         b64      = new String(Base64.getDecoder().decode(authHeader.getBytes())).split(":", 2);
+        String           username = b64[0];
+        Optional<Person> authUser = state.getByEmail(username);
+        return authUser.orElse(null);
     }
 
 }

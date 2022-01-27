@@ -3,8 +3,9 @@ package me.travja.performances.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import lombok.Getter;
-import me.travja.performances.serializers.ZonedDateTimeSerializer;
 import me.travja.performances.api.models.Person;
+import me.travja.performances.serializers.ZonedDateTimeSerializer;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.time.ZonedDateTime;
 import java.util.Map;
@@ -17,6 +18,9 @@ public class Util {
             .registerModule(new SimpleModule().addSerializer(ZonedDateTime.class, new ZonedDateTimeSerializer()));
 
     public static long getLong(Map<String, Object> event, String key) {
+        if (event.get(key) instanceof Integer)
+            return ((Integer) event.get(key)).longValue();
+
         return Long.parseLong((String) event.get(key));
     }
 
@@ -71,6 +75,14 @@ public class Util {
 
 
         System.out.println("Sent message successfully....");
+    }
+
+    public static String hash(String password) {
+        return BCrypt.hashpw(password, BCrypt.gensalt(10)); // 10 Salting rounds!
+    }
+
+    public static boolean checkHash(String pass, String hash) {
+        return BCrypt.checkpw(pass, hash);
     }
 
 }

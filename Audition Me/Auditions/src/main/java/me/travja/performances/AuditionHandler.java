@@ -24,6 +24,9 @@ public class AuditionHandler extends AuditionRequestHandler {
 
     @Override
     public Map<String, Object> handleGet(Map<String, Object> event, String[] path, Person authUser) {
+        if (authUser == null)
+            return constructResponse(403, "message", "You don't have permission for this endpoint");
+
         if (path.length == 0)
             throw new IllegalArgumentException("Missing path information");
 
@@ -31,13 +34,15 @@ public class AuditionHandler extends AuditionRequestHandler {
             if (path.length < 3)
                 throw new IllegalArgumentException("Please provide /status/{performanceId}/{performerId");
 
+            if (!(authUser instanceof Performer))
+                return constructResponse(403, "message", "You don't have permission for this endpoint");
+
             long performanceId = Long.parseLong(path[1]);
-            long performerId   = Long.parseLong(path[2]);
 
             Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
                     new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
-            Performer performer = state.getPerformerById(performerId);
-            Audition  audition  = performance.getAudition(performerId);
+            Performer performer = (Performer) authUser;
+            Audition  audition  = performance.getAudition(performer.getId());
             if (audition != null) {
                 sendEmail(performer, "Audition Status", audition.getStatus());
                 return constructResponse(200,
@@ -63,6 +68,9 @@ public class AuditionHandler extends AuditionRequestHandler {
 
     @Override
     public Map<String, Object> handlePost(Map<String, Object> event, String[] path, Person authUser) {
+        if (!(authUser instanceof Performer))
+            return constructResponse(403, "message", "You don't have permission for this endpoint");
+
         ensureExists(event, "performanceId");
         ensureExists(event, "performerId");
         ensureExists(event, "date");
@@ -88,6 +96,8 @@ public class AuditionHandler extends AuditionRequestHandler {
 
     @Override
     public Map<String, Object> handleDelete(Map<String, Object> event, String[] path, Person authUser) {
+        if (authUser == null)
+            return constructResponse(403, "message", "You don't have permission for this endpoint");
         ensureExists(event, "id");
         ensureExists(event, "auditionId");
 

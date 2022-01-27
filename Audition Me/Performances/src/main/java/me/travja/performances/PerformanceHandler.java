@@ -2,9 +2,7 @@ package me.travja.performances;
 
 import me.travja.performances.api.AuditionRequestHandler;
 import me.travja.performances.api.StateManager;
-import me.travja.performances.api.models.Performance;
-import me.travja.performances.api.models.Performer;
-import me.travja.performances.api.models.Person;
+import me.travja.performances.api.models.*;
 import me.travja.performances.processor.LambdaController;
 
 import java.time.ZonedDateTime;
@@ -51,6 +49,9 @@ public class PerformanceHandler extends AuditionRequestHandler {
 
     @Override
     public Map<String, Object> handlePost(Map<String, Object> event, String[] path, Person authUser) {
+        if (!(authUser instanceof Director || authUser instanceof CastingDirector))
+            return constructResponse(403, "message", "You don't have permission for this endpoint");
+
         String action = path.length == 0 ? "create" : path[0].toLowerCase();
 
         if (action.equals("create")) {
@@ -85,11 +86,14 @@ public class PerformanceHandler extends AuditionRequestHandler {
             return constructResponse(200, "message", "Performer cast");
         }
 
-        throw new IllegalArgumentException("Invalid action");
+        throw new IllegalArgumentException("Invalid action '" + action + "'");
     }
 
     @Override
     public Map<String, Object> handleDelete(Map<String, Object> event, String[] path, Person authUser) {
+        if (!(authUser instanceof Director || authUser instanceof CastingDirector))
+            return constructResponse(403, "message", "You don't have permission for this endpoint");
+
         String id = path[0];
         ensureNotNull("/{id}", id);
         //TODO Get authenticated user as director. Ensure he owns the performance
