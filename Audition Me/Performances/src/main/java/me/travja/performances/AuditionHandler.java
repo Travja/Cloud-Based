@@ -10,13 +10,12 @@ import me.travja.performances.processor.LambdaController;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 import static me.travja.performances.api.Util.*;
 
-// '/audition' endpoint
-@LambdaController("performers")
+// '/auditions' endpoint
+@LambdaController("auditions")
 public class AuditionHandler extends AuditionRequestHandler {
 
     private static DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
@@ -31,23 +30,30 @@ public class AuditionHandler extends AuditionRequestHandler {
             throw new IllegalArgumentException("Missing path information");
 
         if (path[0].equalsIgnoreCase("status")) {
-            if (path.length < 3)
-                throw new IllegalArgumentException("Please provide /status/{performanceId}/{performerId");
-
-            if (!(authUser instanceof Performer))
-                return constructResponse(403, "message", "You don't have permission for this endpoint");
+            if (path.length < 2)
+                throw new IllegalArgumentException("Please provide /status/{performanceId} OR /status/{performanceId}/{performerId}");
 
             long performanceId = Long.parseLong(path[1]);
+            long performerId   = path.length >= 3 ? Long.parseLong(path[2]) : authUser.getId();
+            if (authUser instanceof Performer && performerId != authUser.getId())
+                return constructResponse(403, "message", "You don't have permission for this endpoint");
 
-            Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
-                    new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
-            Performer performer = (Performer) authUser;
-            Audition  audition  = performance.getAudition(performer.getId());
+            Performer             performer   = state.getPerformerById(performerId);
+            Optional<Performance> performance = state.getPerformanceById(performanceId);
+            if (performance.isEmpty())
+                return constructResponse(404, "errorMessage", "Performance with ID '" + performanceId + "' doesn't exist");
+
+            Audition audition = performance.get().getAudition(performer.getId());
             if (audition != null) {
-                sendEmail(performer, "Audition Status", audition.getStatus());
-                return constructResponse(200,
-                        "audition", audition,
-                        "message", "Email sent");
+                List<Object> list = new LinkedList<>();
+                list.add("audition");
+                list.add(audition);
+                if (performerId == authUser.getId()) {
+                    sendEmail(performer, "Audition Status", audition.getStatus());
+                    list.add("message");
+                    list.add("Email sent");
+                }
+                return constructResponse(200, list.toArray());
             } else {
                 return constructResponse(200, "message", "No audition exists for that performer and " +
                         "this performance");
@@ -71,9 +77,7 @@ public class AuditionHandler extends AuditionRequestHandler {
         if (!(authUser instanceof Performer))
             return constructResponse(403, "message", "You don't have permission for this endpoint");
 
-        ensureExists(event, "performanceId");
-        ensureExists(event, "performerId");
-        ensureExists(event, "date");
+        ensureExists(event, "performanceId", "performerId", "date");
 
         long performanceId = getLong(event, "performanceId");
         long performerId   = getLong(event, "performerId");
@@ -98,8 +102,7 @@ public class AuditionHandler extends AuditionRequestHandler {
     public Map<String, Object> handleDelete(Map<String, Object> event, String[] path, Person authUser) {
         if (authUser == null)
             return constructResponse(403, "message", "You don't have permission for this endpoint");
-        ensureExists(event, "id");
-        ensureExists(event, "auditionId");
+        ensureExists(event, "id", "auditionId");
 
         long performanceId = getLong(event, "id");
         Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->

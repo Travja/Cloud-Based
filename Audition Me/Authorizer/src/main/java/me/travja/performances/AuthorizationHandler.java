@@ -10,14 +10,14 @@ import me.travja.performances.processor.LambdaController;
 
 import java.util.*;
 
-// '/audition' endpoint
 @LambdaController
 public class AuthorizationHandler extends AuditionRequestHandler {
 
     public boolean checkAuth(String auth, Person authUser) {
-        String[] b64 = new String(Base64.getDecoder().decode(auth)).split(":", 2);
-//        String   username = b64[0];
-        String pass = b64[1];
+        String[] b64  = new String(Base64.getDecoder().decode(auth)).split(":", 2);
+        String   pass = b64[1];
+
+        System.out.println("Auth user is " + authUser.getName());
 
         return Util.checkHash(pass, authUser.getPassword());
     }
@@ -28,6 +28,7 @@ public class AuthorizationHandler extends AuditionRequestHandler {
         String authHeader = getAuthHeader(event).replace("Basic ", "");
         if (authHeader == null) return constructResponse(401);
         boolean authorized = authUser != null ? checkAuth(authHeader, authUser) : false;
+        System.out.println("Passwords match? " + authorized);
         return constructAuthResponse(authorized, (String) event.get("methodArn"));
     }
 
@@ -38,16 +39,14 @@ public class AuthorizationHandler extends AuditionRequestHandler {
         return map;
     }
 
-    /**
+    /*
      * 'policyDocument': {
-     * 'Version': '2012-10-17',
-     * 'Statement': [
-     * {
-     * 'Action': 'execute-api:Invoke',
-     * 'Effect': 'Allow' if found else 'Deny',
-     * 'Resource': event['methodArn']
-     * }
-     * ]
+     *     'Version': '2012-10-17',
+     *     'Statement': [{
+     *         'Action': 'execute-api:Invoke',
+     *         'Effect': 'Allow|Deny',
+     *         'Resource': event['methodArn']
+     *     }]
      * }
      */
     @Data

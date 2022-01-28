@@ -127,7 +127,6 @@ public class LambdaHandler
     }
 
     protected Person getAuthUser(String authHeader) {
-        //TODO Get valid user
         String[]         b64      = new String(Base64.getDecoder().decode(authHeader.getBytes())).split(":", 2);
         String           username = b64[0];
         Optional<Person> authUser = state.getByEmail(username);

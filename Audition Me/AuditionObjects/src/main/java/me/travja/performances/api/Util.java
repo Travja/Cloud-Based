@@ -24,9 +24,11 @@ public class Util {
         return Long.parseLong((String) event.get(key));
     }
 
-    public static void ensureExists(Map<String, Object> event, String key) {
-        if (!event.containsKey(key))
-            throw new RuntimeException("Missing `" + key + "` in request body.");
+    public static void ensureExists(Map<String, Object> event, String... keys) {
+        for (String key : keys) {
+            if (!event.containsKey(key))
+                throw new RuntimeException("Missing `" + key + "` in request body.");
+        }
     }
 
     public static void ensureNotNull(String key, Object obj) {

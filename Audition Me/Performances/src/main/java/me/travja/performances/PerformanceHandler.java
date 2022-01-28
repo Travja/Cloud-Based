@@ -55,9 +55,7 @@ public class PerformanceHandler extends AuditionRequestHandler {
         String action = path.length == 0 ? "create" : path[0].toLowerCase();
 
         if (action.equals("create")) {
-            ensureExists(event, "venue");
-            ensureExists(event, "title");
-            ensureExists(event, "date");
+            ensureExists(event, "venue", "title", "date");
 
             String        title = (String) event.get("title");
             String        venue = (String) event.get("venue");
@@ -71,10 +69,7 @@ public class PerformanceHandler extends AuditionRequestHandler {
                     "performance", performance,
                     "numPerformances", state.getPerformances().size());
         } else if (action.equals("cast")) {
-            ensureExists(event, "performanceId");
-            ensureExists(event, "performerId");
-
-            //TODO Get authenticated user as casting director. Ensure he owns the performance
+            ensureExists(event, "performanceId", "performerId");
 
             long performanceId = getLong(event, "performanceId");
             Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
@@ -96,11 +91,12 @@ public class PerformanceHandler extends AuditionRequestHandler {
 
         String id = path[0];
         ensureNotNull("/{id}", id);
-        //TODO Get authenticated user as director. Ensure he owns the performance
 
         long performanceId = Long.parseLong(id);
-        Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
-                new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
+        Performance performance = state.getPerformanceById(performanceId).orElse(null);
+        if(performance == null)
+            return constructResponse(200, "numPerformances", state.getPerformances().size(), "error",
+                    "Performance " + performanceId + " does not exist.");
         state.getPerformances().remove(performance);
         return constructResponse(200, "numPerformances", state.getPerformances().size());
     }

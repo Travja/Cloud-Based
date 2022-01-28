@@ -21,6 +21,7 @@ public class StateManager {
     private static StateManager instance;
 
     // This will be offloaded to Dynamo
+    // TODO Load data from Dynamo
     private List<Performer>       performers       = new ArrayList<>();
     private List<Director>        directors        = new ArrayList<>();
     private List<CastingDirector> castingDirectors = new ArrayList<>();
@@ -42,12 +43,13 @@ public class StateManager {
 
         save(new Performer("Travis Eggett", "teggett@student.neumont.edu", "phone number", "test"));
         save(new Performer("Chris Cantera", "ccantera@neumont.edu", "phone number", "test2")); //Hey look, we're performers
+        save(new Director("Steven Spielberg", "spiel@berg.com", "123-456-7890", "test3"));
 
         performances.add(
                 new Performance(
                         "Swan Lake",
                         "111 East St.",
-                        save(new Director()),
+                        (Director) getByEmail("spiel@berg.com").get(),
                         save(new CastingDirector()),
                         new ArrayList<>(Arrays.asList(ZonedDateTime.now().plusDays(10))),
                         new ArrayList<>()
@@ -128,7 +130,10 @@ public class StateManager {
         allPeople.addAll(getCastingDirectors());
 
         return allPeople.stream()
-                .filter(person -> person.getEmail().equalsIgnoreCase(email))
+                .filter(person -> {
+                    System.out.println(person.getEmail());
+                    return person.getEmail().equalsIgnoreCase(email);
+                })
                 .findFirst();
     }
 
