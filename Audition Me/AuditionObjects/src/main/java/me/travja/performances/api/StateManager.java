@@ -1,5 +1,16 @@
 package me.travja.performances.api;
 
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.PutItemOutcome;
+import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -18,14 +29,18 @@ import java.util.regex.Pattern;
 public class StateManager {
 
     @Setter(AccessLevel.PRIVATE)
-    private static StateManager instance;
-
+    private static StateManager          instance;
+    private static ObjectMapper          mapper           = Util.getMapper();
+    private final  Regions               REGION           = Regions.US_WEST_2;
+    private final  String                PERSON_TABLE     = "Person";
     // This will be offloaded to Dynamo
     // TODO Load data from Dynamo
-    private List<Performer>       performers       = new ArrayList<>();
-    private List<Director>        directors        = new ArrayList<>();
-    private List<CastingDirector> castingDirectors = new ArrayList<>();
-    private List<Performance>     performances     = new ArrayList<>();
+    private        List<Performer>       performers       = new ArrayList<>();
+    private        List<Director>        directors        = new ArrayList<>();
+    private        List<CastingDirector> castingDirectors = new ArrayList<>();
+    private        List<Performance>     performances     = new ArrayList<>();
+    private        DynamoDB              dynamo;
+    private        Table                 personTable;
 
     public static StateManager getInstance() {
         if (instance == null) {
@@ -36,6 +51,8 @@ public class StateManager {
     }
 
     private void setup() {
+        initDynamo();
+
         ObjectMapper mapper     = new ObjectMapper();
         SimpleModule testModule = new SimpleModule("MyModule", new Version(1, 0, 0, "", null, null));
         testModule.addSerializer(ZonedDateTime.class, new ZonedDateTimeSerializer());
@@ -68,16 +85,55 @@ public class StateManager {
                 ));
     }
 
-    public <T extends Person> T save(T person) {
+    private void initDynamo() {
+        AmazonDynamoDBClient client = new AmazonDynamoDBClient();
+        client.setRegion(Region.getRegion(REGION));
+        dynamo = new DynamoDB(client);
+        List<String> names = new ArrayList<>();
+        dynamo.listTables().forEach(table -> names.add(table.getTableName()));
+        boolean personTableCreated = names.contains(PERSON_TABLE);
+        if (!personTableCreated) {
+            System.out.println("Person table not created.");
+            List<KeySchemaElement> keys = new ArrayList<>(Arrays.asList(new KeySchemaElement("id", "Number")));
+            personTable = dynamo.createTable(new CreateTableRequest(PERSON_TABLE, keys));
+        } else {
+            System.out.println("Person table exists.");
+            personTable = dynamo.getTable(PERSON_TABLE);
+
+            for (Item item : personTable.scan()) {
+                Person person = Person.deserialize(item);
+                if (person instanceof CastingDirector)
+                    castingDirectors.add((CastingDirector) person);
+                else if (person instanceof Director)
+                    directors.add((Director) person);
+                else
+                    performers.add((Performer) person);
+                System.out.println("Loaded " + person.getName());
+            }
+        }
+    }
+
+    public <T extends Person> T save(T person) throws ConditionalCheckFailedException {
+        Item item = new Item()
+                .withString("name", person.getName())
+                .withString("email", person.getEmail())
+                .withString("phone", person.getPhone())
+                .withString("password", person.getPassword())
+                .withString("type", person.getClass().getSimpleName())
+                .withLong("id", person.getId());
         if (person instanceof CastingDirector) {
             castingDirectors.add((CastingDirector) person);
         } else if (person instanceof Director) {
             directors.add((Director) person);
         } else if (person instanceof Performer) {
             performers.add((Performer) person);
+            item = item.withList("currentPerformances", ((Performer) person).getCurrentPerformances())
+                    .withList("pastPerformances", ((Performer) person).getPastPerformances());
         }
 
-        //TODO Save data off to Dynamo
+        PutItemOutcome outcome = personTable.putItem(new PutItemSpec().withItem(item));
+        System.out.println(outcome.getPutItemResult().toString());
+        System.out.println("Saved " + person.getName());
 
         return person;
     }
