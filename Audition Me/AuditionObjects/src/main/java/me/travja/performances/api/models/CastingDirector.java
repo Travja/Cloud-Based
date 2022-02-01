@@ -1,12 +1,19 @@
 package me.travja.performances.api.models;
 
 
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBDocument;
+
 import java.util.UUID;
 
+@DynamoDBDocument
 public class CastingDirector extends Director {
 
     public CastingDirector() {
         super();
+    }
+
+    public CastingDirector(String name, String email, String phone, String password) {
+        super(name, email, phone, password);
     }
 
     public CastingDirector(UUID id, String name, String email, String phone, String password) {

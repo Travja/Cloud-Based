@@ -1,6 +1,7 @@
 package me.travja.performances.api.models;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBDocument;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Data
+@DynamoDBDocument
 @NoArgsConstructor
 @AllArgsConstructor
 public class Performer extends Person {

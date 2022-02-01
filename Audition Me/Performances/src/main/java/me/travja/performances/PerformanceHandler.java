@@ -9,7 +9,8 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import static me.travja.performances.api.Util.*;
+import static me.travja.performances.api.Util.ensureExists;
+import static me.travja.performances.api.Util.ensureNotNull;
 
 // '/performance' endpoint
 @LambdaController("performances")
@@ -31,14 +32,14 @@ public class PerformanceHandler extends AuditionRequestHandler {
                 throw new IllegalArgumentException("Missing '/search/{title}'");
 
             String      title       = path[1];
-            Performance performance = state.getPerformanceByName(title);
+            Performance performance = state.getPerformanceByName(title).orElse(null);
             return constructResponse(200, "performance", performance);
         }
 
         if (!action.trim().isEmpty())
             try {
                 return constructResponse(200, "performance",
-                        state.getPerformanceById(Long.parseLong(action)).orElse(null));
+                        state.getPerformanceById(UUID.fromString(action)).orElse(null));
             } catch (NumberFormatException e) {}
 
         return constructResponse(200, "performances", state.getPerformances().toArray());
@@ -68,7 +69,7 @@ public class PerformanceHandler extends AuditionRequestHandler {
         } else if (action.equals("cast")) {
             ensureExists(event, "performanceId", "performerId");
 
-            long                  performanceId = getLong(event, "performanceId");
+            UUID                  performanceId = UUID.fromString(String.valueOf(event.get("performanceId")));
             Optional<Performance> perf          = state.getPerformanceById(performanceId);
             Performance performance = perf.orElseThrow(() ->
                     new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
@@ -90,7 +91,7 @@ public class PerformanceHandler extends AuditionRequestHandler {
         String id = path[0];
         ensureNotNull("/{id}", id);
 
-        long                  performanceId = Long.parseLong(id);
+        UUID                  performanceId = UUID.fromString(id);
         Optional<Performance> perf          = state.getPerformanceById(performanceId);
         Performance           performance   = perf.orElse(null);
         if (performance == null)

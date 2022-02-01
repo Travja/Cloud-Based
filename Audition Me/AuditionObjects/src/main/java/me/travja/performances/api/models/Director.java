@@ -1,10 +1,11 @@
 package me.travja.performances.api.models;
 
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBDocument;
 
 import java.util.UUID;
 
+@DynamoDBDocument
 public class Director extends Person {
 
     public Director() {

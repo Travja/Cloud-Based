@@ -7,7 +7,6 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.model.*;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -59,34 +58,39 @@ public class StateManager {
             save(new Performer("Travis Eggett", "teggett@student.neumont.edu", "phone number", "test"));
             save(new Performer("Chris Cantera", "ccantera@neumont.edu", "phone number", "test2")); //Hey look, we're performers
             save(new Director("Steven Spielberg", "spiel@berg.com", "123-456-7890", "test3"));
+            save(new CastingDirector("Casting Director", "casting@director.com", "123-456-7891", "test3"));
+            addPerformance(
+                    new Performance(
+                            "Swan Lake",
+                            "111 East St.",
+                            getOrLoadByEmail("spiel@berg.com", Director.class).get(),
+                            getOrLoadByEmail("casting@director.com", CastingDirector.class).get(),
+                            new ArrayList<>(Arrays.asList(ZonedDateTime.now().plusDays(10))),
+                            new ArrayList<>()
+                    )
+            );
+            addPerformance(new Performance("Nutcracker", "Why are we doing ballets?",
+                    getOrLoadByEmail("spiel@berg.com", Director.class).get(),
+                    getOrLoadByEmail("casting@director.com", CastingDirector.class).get(),
+                    Arrays.asList(ZonedDateTime.now().plusDays(12)),
+                    new ArrayList<>()));
         } else {
-
+            //Load data
         }
+
     }
 
     private void setup() {
         initDynamo();
 
         ObjectMapper mapper     = new ObjectMapper();
-        SimpleModule testModule = new SimpleModule("MyModule", new Version(1, 0, 0, "", null, null));
-        testModule.addSerializer(ZonedDateTime.class, new ZonedDateTimeSerializer());
-        mapper.registerModule(testModule);
+        SimpleModule dateModule = new SimpleModule("ZoneDateModule", new Version(1, 0, 0, "", null, null));
+        dateModule.addSerializer(ZonedDateTime.class, new ZonedDateTimeSerializer());
+        mapper.registerModule(dateModule);
 
         initData();
 
-        performances.add(
-                new Performance(
-                        "Swan Lake",
-                        "111 East St.",
-                        getOrLoadByEmail("spiel@berg.com", Director.class).get(),
-                        save(new CastingDirector()),
-                        new ArrayList<>(Arrays.asList(ZonedDateTime.now().plusDays(10))),
-                        new ArrayList<>()
-                )
-        );
-        performances.add(new Performance());
-
-        Optional<Performance> zero = instance.getPerformanceById(0);
+        Optional<Performance> zero = instance.getPerformanceByName("Swan Lake");
         zero.orElseThrow(() ->
                         new NoSuchElementException("Performance with ID '0' doesn't exist"))
                 .setAuditionList(new ArrayList(
@@ -103,6 +107,7 @@ public class StateManager {
         boolean      personTableCreated = names.contains(PERFORMER_TABLE);
         dynamo.newTableMapper(Person.class).createTableIfNotExists(new ProvisionedThroughput(25L, 25L));
         dynamo.newTableMapper(Performance.class).createTableIfNotExists(new ProvisionedThroughput(25L, 25L));
+        dynamo.newTableMapper(Audition.class).createTableIfNotExists(new ProvisionedThroughput(25L, 25L));
         if (personTableCreated) {
             System.out.println("Performer table exists.");
             dynamo.scan(Performer.class, new DynamoDBScanExpression()
@@ -144,7 +149,7 @@ public class StateManager {
         return person;
     }
 
-    public Performance save(Performance performance) throws ConditionalCheckFailedException, JsonProcessingException {
+    public Performance save(Performance performance) throws ConditionalCheckFailedException {
         if (!hasPerformance(performance))
             performances.add(performance);
         dynamo.save(performance);
@@ -156,7 +161,7 @@ public class StateManager {
         return getPerformanceById(performance.getId()).isPresent();
     }
 
-    public Performance getOrLoadPerformance(long id) {
+    public Performance getOrLoadPerformance(UUID id) {
         Optional<Performance> cached = getPerformanceById(id);
         if (cached.isPresent())
             return cached.get();
@@ -224,28 +229,23 @@ public class StateManager {
         }).findFirst().orElse(null);
     }
 
-    public Optional<Performance> getPerformanceById(long id) {
+    public Optional<Performance> getPerformanceById(UUID id) {
         return performances.stream()
-                .filter(performance -> performance.getId() == id)
+                .filter(performance -> performance.getId().equals(id))
                 .findFirst();
     }
 
-    public Performance getPerformanceByName(String title) {
+    public Optional<Performance> getPerformanceByName(String title) {
         Pattern regex = Pattern.compile(".*" + title.toLowerCase() + ".*");
 
         return performances.stream().filter(perf -> {
             Matcher matcher = regex.matcher(perf.getTitle().toLowerCase());
             return matcher.find();
-        }).findFirst().orElse(null);
+        }).findFirst();
     }
 
     public void addPerformance(Performance performance) {
-        try {
-            save(performance);
-        } catch (JsonProcessingException e) {
-            System.err.println("Could not save performance");
-            e.printStackTrace();
-        }
+        save(performance);
     }
 
     public <T extends Person> Optional<T> getByEmail(String email, Class<T> target) {
