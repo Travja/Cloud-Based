@@ -24,7 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Data
-public class StateManager<T> {
+public class StateManager {
 
     private final static String                PERFORMER_TABLE        = "Performer";
     private final static String                DIRECTOR_TABLE         = "Director";
@@ -41,10 +41,8 @@ public class StateManager<T> {
     private              List<Director>        directors              = new ArrayList<>();
     private              List<CastingDirector> castingDirectors       = new ArrayList<>();
     private              List<Performance>     performances           = new ArrayList<>();
-    //    private        Table                 personTable;
-    //    private        Table                 performanceTable;
-    private              AmazonDynamoDB        dynamo                 = AmazonDynamoDBClientBuilder.standard().build();
-    private              DynamoDBMapper        dbmapper               = new DynamoDBMapper(dynamo);
+    private              AmazonDynamoDB        dynamoClient           = AmazonDynamoDBClientBuilder.standard().build();
+    private              DynamoDBMapper        dynamo                 = new DynamoDBMapper(dynamoClient);
 
     public static StateManager getInstance() {
         if (instance == null) {
@@ -101,27 +99,27 @@ public class StateManager<T> {
     }
 
     private void initDynamo() {
-        List<String> names              = dynamo.listTables().getTableNames();
+        List<String> names              = dynamoClient.listTables().getTableNames();
         boolean      personTableCreated = names.contains(PERFORMER_TABLE);
-        dbmapper.newTableMapper(Person.class).createTableIfNotExists(new ProvisionedThroughput(25L, 25L));
-        dbmapper.newTableMapper(Performance.class).createTableIfNotExists(new ProvisionedThroughput(25L, 25L));
+        dynamo.newTableMapper(Person.class).createTableIfNotExists(new ProvisionedThroughput(25L, 25L));
+        dynamo.newTableMapper(Performance.class).createTableIfNotExists(new ProvisionedThroughput(25L, 25L));
         if (personTableCreated) {
             System.out.println("Performer table exists.");
-            dbmapper.scan(Performer.class, new DynamoDBScanExpression()
+            dynamo.scan(Performer.class, new DynamoDBScanExpression()
                             .withExpressionAttributeValues(Map.of("type", new AttributeValue("Performer")))
                             .withConsistentRead(true)).stream()
                     .forEach(person -> {
                         performers.add(person);
                         System.out.println("Loaded performer" + person.getName());
                     });
-            dbmapper.scan(CastingDirector.class, new DynamoDBScanExpression()
+            dynamo.scan(CastingDirector.class, new DynamoDBScanExpression()
                             .withExpressionAttributeValues(Map.of("type", new AttributeValue("CastingDirector")))
                             .withConsistentRead(true)).stream()
                     .forEach(person -> {
                         castingDirectors.add(person);
                         System.out.println("Loaded casting director " + person.getName());
                     });
-            dbmapper.scan(Director.class, new DynamoDBScanExpression()
+            dynamo.scan(Director.class, new DynamoDBScanExpression()
                             .withExpressionAttributeValues(Map.of("type", new AttributeValue("Director")))
                             .withConsistentRead(true)).stream()
                     .forEach(person -> {
@@ -140,7 +138,7 @@ public class StateManager<T> {
             performers.add((Performer) person);
         }
 
-        dbmapper.save(person);
+        dynamo.save(person);
         System.out.println("Saved " + person.getName());
 
         return person;
@@ -149,7 +147,7 @@ public class StateManager<T> {
     public Performance save(Performance performance) throws ConditionalCheckFailedException, JsonProcessingException {
         if (!hasPerformance(performance))
             performances.add(performance);
-        dbmapper.save(performance);
+        dynamo.save(performance);
 
         return performance;
     }
@@ -163,7 +161,7 @@ public class StateManager<T> {
         if (cached.isPresent())
             return cached.get();
         else {
-            Performance perf = dbmapper.load(
+            Performance perf = dynamo.load(
                     Performance.class,
                     id,
                     DynamoDBMapperConfig.builder().withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT).build()
@@ -181,7 +179,7 @@ public class StateManager<T> {
             Map<String, Condition> filter = new HashMap<>();
             filter.put("name", new Condition().withComparisonOperator(ComparisonOperator.EQ)
                     .withAttributeValueList(new AttributeValue().withS(name)));
-            Performer perf = dbmapper.scan(
+            Performer perf = dynamo.scan(
                     Performer.class,
                     new DynamoDBScanExpression().withScanFilter(filter),
                     DynamoDBMapperConfig.builder().withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT).build()
@@ -200,13 +198,11 @@ public class StateManager<T> {
             Map<String, Condition> filter = new HashMap<>();
             filter.put("email", new Condition().withComparisonOperator(ComparisonOperator.EQ)
                     .withAttributeValueList(new AttributeValue().withS(email)));
-            Optional<T> perf = dbmapper.scan(
+            Optional<T> perf = dynamo.scan(
                     target,
                     new DynamoDBScanExpression().withScanFilter(filter),
                     DynamoDBMapperConfig.builder().withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT).build()
             ).stream().findFirst();
-//            if (perf != null)
-//                performers.add(perf);
             return perf;
         }
     }
@@ -253,34 +249,17 @@ public class StateManager<T> {
     }
 
     public <T extends Person> Optional<T> getByEmail(String email, Class<T> target) {
-
-
         Map<String, Condition> filter = new HashMap<>();
         filter.put("email", new Condition().withComparisonOperator(ComparisonOperator.EQ)
                 .withAttributeValueList(new AttributeValue().withS(email)));
-        Optional<T> person = dbmapper.scan(
+        Optional<T> person = dynamo.scan(
                 target,
                 new DynamoDBScanExpression().withScanFilter(filter),
                 DynamoDBMapperConfig.builder().withConsistentReads(DynamoDBMapperConfig.ConsistentReads.CONSISTENT).build()
         ).stream().findFirst();
-        if (person != null) {
-//            performers.add(person);
-
-        }
 
         return person;
 
-//        List<Person> allPeople = new ArrayList<>();
-//        allPeople.addAll(getPerformers());
-//        allPeople.addAll(getDirectors());
-//        allPeople.addAll(getCastingDirectors());
-//
-//        return allPeople.stream()
-//                .filter(person -> {
-//                    System.out.println(person.getEmail());
-//                    return person.getEmail().equalsIgnoreCase(email);
-//                })
-//                .findFirst();
     }
 
 }
