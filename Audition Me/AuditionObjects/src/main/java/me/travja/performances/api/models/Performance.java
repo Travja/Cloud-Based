@@ -1,34 +1,48 @@
 package me.travja.performances.api.models;
 
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
-import me.travja.performances.serializers.PersonSerializer;
 import me.travja.performances.api.Util;
+import me.travja.performances.serializers.PersonSerializer;
 import me.travja.performances.serializers.ZonedDateTimeSerializer;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Data
+@DynamoDBTable(tableName = "Performances")
 public class Performance {
 
-    @Setter(AccessLevel.PRIVATE) private long id;
-    private static                       long _id = 0;
+    private static long              _id    = 0;
+    private static DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
 
-    private String title = "No Title";
-    private String venue = "No Address";
-
+    @Setter(AccessLevel.PRIVATE)
+    @DynamoDBHashKey(attributeName = "id")
+    private long                id               = _id++;
+    @DynamoDBAttribute(attributeName = "title")
+    private String              title            = "No Title";
+    @DynamoDBAttribute(attributeName = "venue")
+    private String              venue            = "No Address";
+    @DynamoDBAttribute(attributeName = "director")
     @JsonSerialize(using = PersonSerializer.class)
     private Director            director;
+    @DynamoDBAttribute(attributeName = "castingDirector")
     @JsonSerialize(using = PersonSerializer.class)
     private CastingDirector     castingDirector;
+    @DynamoDBAttribute(attributeName = "performanceDates")
     @JsonSerialize(contentUsing = ZonedDateTimeSerializer.class)
     private List<ZonedDateTime> performanceDates = new ArrayList<>();
+    @DynamoDBAttribute(attributeName = "auditionList")
     private List<Audition>      auditionList     = new ArrayList<>();
+    @DynamoDBAttribute(attributeName = "cast")
     @JsonSerialize(contentUsing = PersonSerializer.class)
     private List<Performer>     cast             = new ArrayList<>();
 
@@ -39,7 +53,6 @@ public class Performance {
     public Performance(String title, String venue,
                        Director director, CastingDirector castingDirector,
                        List<ZonedDateTime> performanceDates, List<Performer> cast) {
-        this.id = _id++;
         this.title = title;
         this.venue = venue;
         this.director = director;
@@ -73,8 +86,8 @@ public class Performance {
         return getAudition(performer.getId());
     }
 
-    public Audition getAudition(long performerId) {
-        return auditionList.stream().filter(audition -> audition.getPerformer().getId() == performerId)
+    public Audition getAudition(UUID performerId) {
+        return auditionList.stream().filter(audition -> audition.getPerformer().getId().equals(performerId))
                 .findFirst().orElse(null);
     }
 
@@ -98,7 +111,5 @@ public class Performance {
         if (aud != null)
             auditionList.remove(aud);
     }
-
-    private static DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
 
 }

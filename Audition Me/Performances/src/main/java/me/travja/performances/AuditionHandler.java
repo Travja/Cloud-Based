@@ -34,7 +34,7 @@ public class AuditionHandler extends AuditionRequestHandler {
                 throw new IllegalArgumentException("Please provide /status/{performanceId} OR /status/{performanceId}/{performerId}");
 
             long performanceId = Long.parseLong(path[1]);
-            long performerId   = path.length >= 3 ? Long.parseLong(path[2]) : authUser.getId();
+            UUID performerId   = path.length >= 3 ? UUID.fromString(path[2]) : authUser.getId();
             if (authUser instanceof Performer && performerId != authUser.getId())
                 return constructResponse(403, "message", "You don't have permission for this endpoint");
 
@@ -43,7 +43,7 @@ public class AuditionHandler extends AuditionRequestHandler {
             if (performance.isEmpty())
                 return constructResponse(404, "errorMessage", "Performance with ID '" + performanceId + "' doesn't exist");
 
-            Audition audition = performance.get().getAudition(performer.getId());
+            Audition audition = performance.get().getAudition(performer);
             if (audition != null) {
                 List<Object> list = new LinkedList<>();
                 list.add("audition");
@@ -60,9 +60,10 @@ public class AuditionHandler extends AuditionRequestHandler {
             }
         } else {
             try {
-                long id = Long.parseLong(path[0]);
+                long                  id   = Long.parseLong(path[0]);
+                Optional<Performance> perf = state.getPerformanceById(id);
                 return constructResponse(200, "auditionList",
-                        state.getPerformanceById(id).orElseThrow(() ->
+                        perf.orElseThrow(() ->
                                         new NoSuchElementException("Performance with ID '" + id + "' doesn't exist"))
                                 .getAuditionList());
             } catch (NumberFormatException ex) {
@@ -80,9 +81,10 @@ public class AuditionHandler extends AuditionRequestHandler {
         ensureExists(event, "performanceId", "performerId", "date");
 
         long performanceId = getLong(event, "performanceId");
-        long performerId   = getLong(event, "performerId");
+        UUID performerId   = UUID.fromString(String.valueOf(event.get("performerId")));
 
-        Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
+        Optional<Performance> perf = state.getPerformanceById(performanceId);
+        Performance performance = perf.orElseThrow(() ->
                 new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
         Performer     performer = state.getPerformerById(performerId);
         ZonedDateTime date      = ZonedDateTime.parse((String) event.get("date"), format);
@@ -105,7 +107,9 @@ public class AuditionHandler extends AuditionRequestHandler {
         ensureExists(event, "id", "auditionId");
 
         long performanceId = getLong(event, "id");
-        Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
+
+        Optional<Performance> perf = state.getPerformanceById(performanceId);
+        Performance performance = perf.orElseThrow(() ->
                 new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
         performance.removeAudition(getLong(event, "auditionId"));
         return constructResponse(200);

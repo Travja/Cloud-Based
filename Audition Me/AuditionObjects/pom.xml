@@ -36,10 +36,15 @@
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-ses</artifactId>
-            <version>1.12.141</version>
-            <scope>provided</scope>
+            <artifactId>aws-java-sdk-dynamodb</artifactId>
+            <version>1.11.163</version>
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.amazonaws</groupId>-->
+<!--            <artifactId>aws-java-sdk-ses</artifactId>-->
+<!--            <version>1.12.141</version>-->
+<!--            <scope>provided</scope>-->
+<!--        </dependency>-->
         <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>

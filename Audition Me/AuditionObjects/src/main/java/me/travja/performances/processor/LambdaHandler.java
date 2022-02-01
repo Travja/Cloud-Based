@@ -129,7 +129,7 @@ public class LambdaHandler
     protected Person getAuthUser(String authHeader) {
         String[]         b64      = new String(Base64.getDecoder().decode(authHeader.getBytes())).split(":", 2);
         String           username = b64[0];
-        Optional<Person> authUser = state.getByEmail(username);
+        Optional<Person> authUser = state.getByEmail(username, Person.class);
         return authUser.orElse(null);
     }
 

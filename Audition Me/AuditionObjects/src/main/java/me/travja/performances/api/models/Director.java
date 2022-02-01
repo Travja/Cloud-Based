@@ -1,6 +1,10 @@
 package me.travja.performances.api.models;
 
 
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
+
+import java.util.UUID;
+
 public class Director extends Person {
 
     public Director() {
@@ -11,7 +15,8 @@ public class Director extends Person {
         super(name, email, phone, password);
     }
 
-    public Director(long id, String name, String email, String phone, String password) {
+    public Director(UUID id, String name, String email, String phone, String password) {
         super(id, name, email, phone, password);
     }
+
 }

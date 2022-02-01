@@ -1,19 +1,22 @@
 package me.travja.performances.api.models;
 
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import me.travja.performances.api.Util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Performer extends Person {
 
+    @DynamoDBAttribute(attributeName = "currentPerformances")
     private List<Performance> currentPerformances = new ArrayList<>();
+    @DynamoDBAttribute(attributeName = "pastPerformances")
     private List<Performance> pastPerformances    = new ArrayList<>();
 
     public Performer(String name) {
@@ -24,7 +27,7 @@ public class Performer extends Person {
         super(name, email, phone, password);
     }
 
-    public Performer(long id, String name, String email, String phone, String password) {
+    public Performer(UUID id, String name, String email, String phone, String password) {
         super(id, name, email, phone, password);
     }
 

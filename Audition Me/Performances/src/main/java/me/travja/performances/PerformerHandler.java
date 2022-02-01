@@ -6,14 +6,14 @@ import me.travja.performances.api.models.Performer;
 import me.travja.performances.api.models.Person;
 import me.travja.performances.processor.LambdaController;
 
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.UUID;
 
 // '/performance' endpoint
 @LambdaController("performers")
 public class PerformerHandler extends AuditionRequestHandler {
 
-    private final  StateManager      state  = StateManager.getInstance();
+    private final StateManager state = StateManager.getInstance();
 
     @Override
     public Map<String, Object> handleGet(Map<String, Object> event, String[] path, Person authUser) {
@@ -30,7 +30,7 @@ public class PerformerHandler extends AuditionRequestHandler {
 
         if (!action.trim().isEmpty())
             try {
-                return constructResponse(200, "performer", state.getPerformerById(Long.parseLong(action)));
+                return constructResponse(200, "performer", state.getPerformerById(UUID.fromString(action)));
             } catch (NumberFormatException e) {}
 
         return constructResponse(200, "performers", state.getPerformers());

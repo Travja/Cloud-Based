@@ -7,10 +7,7 @@ import me.travja.performances.processor.LambdaController;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 import static me.travja.performances.api.Util.*;
 
@@ -71,10 +68,11 @@ public class PerformanceHandler extends AuditionRequestHandler {
         } else if (action.equals("cast")) {
             ensureExists(event, "performanceId", "performerId");
 
-            long performanceId = getLong(event, "performanceId");
-            Performance performance = state.getPerformanceById(performanceId).orElseThrow(() ->
+            long                  performanceId = getLong(event, "performanceId");
+            Optional<Performance> perf          = state.getPerformanceById(performanceId);
+            Performance performance = perf.orElseThrow(() ->
                     new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
-            Performer performer = state.getPerformerById(getLong(event, "performerId"));
+            Performer performer = state.getPerformerById(UUID.fromString(String.valueOf(event.get("performerId"))));
 
             performance.cast(performer);
 
@@ -92,9 +90,10 @@ public class PerformanceHandler extends AuditionRequestHandler {
         String id = path[0];
         ensureNotNull("/{id}", id);
 
-        long performanceId = Long.parseLong(id);
-        Performance performance = state.getPerformanceById(performanceId).orElse(null);
-        if(performance == null)
+        long                  performanceId = Long.parseLong(id);
+        Optional<Performance> perf          = state.getPerformanceById(performanceId);
+        Performance           performance   = perf.orElse(null);
+        if (performance == null)
             return constructResponse(200, "numPerformances", state.getPerformances().size(), "error",
                     "Performance " + performanceId + " does not exist.");
         state.getPerformances().remove(performance);
