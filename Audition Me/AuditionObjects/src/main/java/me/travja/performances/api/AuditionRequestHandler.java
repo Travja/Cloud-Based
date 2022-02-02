@@ -3,55 +3,15 @@ package me.travja.performances.api;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import me.travja.performances.MethodNotSupportedException;
-import me.travja.performances.api.models.Person;
+import me.travja.performances.api.models.LambdaRequest;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public abstract class AuditionRequestHandler {
 
-    public void postConstruct() {}
-
-    public Map<String, Object> handleRequest(Map<String, Object> event, Context context,
-                                             Person authUser, String[] path) {
-        String method  = (String) event.getOrDefault("httpMethod", "GET");
-        String rawPath = (String) event.getOrDefault("path", "");
-        System.out.println("Raw Path is: '" + rawPath + "'");
-
-        try {
-            switch (method) {
-                case "GET":
-                    return handleGet(event, path, authUser);
-                case "POST":
-                    return handlePost(event, path, authUser);
-                case "PATCH":
-                    return handlePatch(event, path, authUser);
-                case "DELETE":
-                    return handleDelete(event, path, authUser);
-            }
-        } catch (Exception e) {
-            System.out.println("Something went severely wrong..\n" + e.getMessage());
-            throw e;
-        }
-
-        throw new MethodNotSupportedException(method + " not supported on this endpoint");
-    }
-
-    public Map<String, Object> handleGet(Map<String, Object> event, String[] path, Person authUser) {
-        throw new MethodNotSupportedException("GET not supported on this endpoint");
-    }
-
-    public Map<String, Object> handlePost(Map<String, Object> event, String[] path, Person authUser) {
-        throw new MethodNotSupportedException("POST not supported on this endpoint");
-    }
-
-    public Map<String, Object> handlePatch(Map<String, Object> event, String[] path, Person authUser) {
-        throw new MethodNotSupportedException("PATCH not supported on this endpoint");
-    }
-
-    public Map<String, Object> handleDelete(Map<String, Object> event, String[] path, Person authUser) {
-        throw new MethodNotSupportedException("DEL not supported on this endpoint");
-    }
+    protected static final StateManager state                  = StateManager.getInstance();
+    protected              boolean      clearCacheOnNewRequest = true;
 
     protected static Map<String, Object> constructResponse(int statusCode, Object... data) {
         Map<String, Object> map = new HashMap<>();
@@ -75,9 +35,55 @@ public abstract class AuditionRequestHandler {
         return map;
     }
 
-    protected String getAuthHeader(Map<String, Object> event) {
-        if (event.containsKey("headers") && ((Map<String, String>) event.get("headers")).containsKey("Authorization"))
-            return ((Map<String, String>) event.get("headers")).get("Authorization");
+    public void postConstruct() {}
+
+    public Map<String, Object> handleRequest(LambdaRequest request, Context context,
+                                             String[] path) {
+        if (clearCacheOnNewRequest)
+            state.clearCache();
+        String method  = request.getString("httpMethod", "GET");
+        String rawPath = request.getString("path", "");
+        System.out.println("Raw Path is: '" + rawPath + "'");
+
+        try {
+            switch (method) {
+                case "GET":
+                    return handleGet(request, path);
+                case "POST":
+                    return handlePost(request, path);
+                case "PATCH":
+                    return handlePatch(request, path);
+                case "DELETE":
+                    return handleDelete(request, path);
+            }
+        } catch (Exception e) {
+            System.out.println("Something went severely wrong..\n" + e.getMessage());
+            throw e;
+        }
+
+        throw new MethodNotSupportedException(method + " not supported on this endpoint");
+    }
+
+    public Map<String, Object> handleGet(LambdaRequest request, String[] path) {
+        throw new MethodNotSupportedException("GET not supported on this endpoint");
+    }
+
+    public Map<String, Object> handlePost(LambdaRequest request, String[] path) {
+        throw new MethodNotSupportedException("POST not supported on this endpoint");
+    }
+
+    public Map<String, Object> handlePatch(LambdaRequest request, String[] path) {
+        throw new MethodNotSupportedException("PATCH not supported on this endpoint");
+    }
+
+    public Map<String, Object> handleDelete(LambdaRequest request, String[] path) {
+        throw new MethodNotSupportedException("DEL not supported on this endpoint");
+    }
+
+    protected String getAuthHeader(LambdaRequest request) {
+        if (request.contains("headers")
+                && ((Map<String, String>) request.get("headers")).containsKey("Authorization"))
+            return ((Map<String, String>) request.get("headers")).get("Authorization");
 
         return null;
     }

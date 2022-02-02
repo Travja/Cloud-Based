@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Data
 @DynamoDBDocument
@@ -34,6 +35,10 @@ public class Performer extends Person {
     }
 
     public void addCurrentPerformance(Performance performance) {
+        currentPerformances = currentPerformances.stream().distinct().collect(Collectors.toList());
+        if (currentPerformances.contains(performance))
+            return;
+
         currentPerformances.add(performance);
     }
 

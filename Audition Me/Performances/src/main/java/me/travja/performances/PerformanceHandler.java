@@ -1,15 +1,18 @@
 package me.travja.performances;
 
+import com.fasterxml.jackson.annotation.JsonView;
 import me.travja.performances.api.AuditionRequestHandler;
-import me.travja.performances.api.StateManager;
-import me.travja.performances.api.models.*;
+import me.travja.performances.api.models.LambdaRequest;
+import me.travja.performances.api.models.Performance;
+import me.travja.performances.api.models.Performer;
+import me.travja.performances.api.models.Person;
+import me.travja.performances.api.views.PerformanceView;
 import me.travja.performances.processor.LambdaController;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import static me.travja.performances.api.Util.ensureExists;
 import static me.travja.performances.api.Util.ensureNotNull;
 
 // '/performance' endpoint
@@ -17,14 +20,14 @@ import static me.travja.performances.api.Util.ensureNotNull;
 public class PerformanceHandler extends AuditionRequestHandler {
 
     private static DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
-    private final  StateManager      state  = StateManager.getInstance();
 
     @Override
-    public Map<String, Object> handleGet(Map<String, Object> event, String[] path, Person authUser) {
+    @JsonView(PerformanceView.class)
+    public Map<String, Object> handleGet(LambdaRequest request, String[] path) {
         String action = path.length == 0 ? "" : path[0].toLowerCase();
 
         System.out.println("EVENT");
-        event.forEach((key, val) -> System.out.println(key + ": " + val));
+        request.getData().forEach((key, val) -> System.out.println(key + ": " + val));
         System.out.println();
 
         if (action.equalsIgnoreCase("search")) {
@@ -46,36 +49,39 @@ public class PerformanceHandler extends AuditionRequestHandler {
     }
 
     @Override
-    public Map<String, Object> handlePost(Map<String, Object> event, String[] path, Person authUser) {
-        if (!(authUser instanceof Director || authUser instanceof CastingDirector))
+    public Map<String, Object> handlePost(LambdaRequest request, String[] path) {
+        Person authUser = request.getAuthUser();
+        if (!(authUser.getType().contains("Director")))
             return constructResponse(403, "message", "You don't have permission for this endpoint");
 
         String action = path.length == 0 ? "create" : path[0].toLowerCase();
 
         if (action.equals("create")) {
-            ensureExists(event, "venue", "title", "date");
+            request.ensureExists("venue", "title", "date");
 
-            String        title = (String) event.get("title");
-            String        venue = (String) event.get("venue");
-            ZonedDateTime date  = ZonedDateTime.parse((String) event.get("date"), format);
+            String        title = request.getString("title");
+            String        venue = request.getString("venue");
+            ZonedDateTime date  = ZonedDateTime.parse(request.getString("date"), format);
 
             Performance performance = new Performance(title, venue, null, null,
                     new ArrayList<>(Arrays.asList(date)), new ArrayList<>());
-            state.addPerformance(performance);
+            state.save(performance);
 
             return constructResponse(200,
                     "performance", performance,
                     "numPerformances", state.getPerformances().size());
         } else if (action.equals("cast")) {
-            ensureExists(event, "performanceId", "performerId");
+            request.ensureExists("performanceId", "performerId");
 
-            UUID                  performanceId = UUID.fromString(String.valueOf(event.get("performanceId")));
+            UUID                  performanceId = request.getUUID("performanceId");
             Optional<Performance> perf          = state.getPerformanceById(performanceId);
             Performance performance = perf.orElseThrow(() ->
                     new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
-            Performer performer = state.getPerformerById(UUID.fromString(String.valueOf(event.get("performerId"))));
+            Performer performer = state.getPerformerById(request.getUUID("performerId"));
 
             performance.cast(performer);
+            state.save(performance);
+            state.save(performer);
 
             return constructResponse(200, "message", "Performer cast");
         }
@@ -84,8 +90,9 @@ public class PerformanceHandler extends AuditionRequestHandler {
     }
 
     @Override
-    public Map<String, Object> handleDelete(Map<String, Object> event, String[] path, Person authUser) {
-        if (!(authUser instanceof Director || authUser instanceof CastingDirector))
+    public Map<String, Object> handleDelete(LambdaRequest request, String[] path) {
+        Person authUser = request.getAuthUser();
+        if (!(authUser.getType().contains("Director")))
             return constructResponse(403, "message", "You don't have permission for this endpoint");
 
         String id = path[0];
@@ -97,7 +104,7 @@ public class PerformanceHandler extends AuditionRequestHandler {
         if (performance == null)
             return constructResponse(200, "numPerformances", state.getPerformances().size(), "error",
                     "Performance " + performanceId + " does not exist.");
-        state.getPerformances().remove(performance);
+        state.delete(performance);
         return constructResponse(200, "numPerformances", state.getPerformances().size());
     }
 

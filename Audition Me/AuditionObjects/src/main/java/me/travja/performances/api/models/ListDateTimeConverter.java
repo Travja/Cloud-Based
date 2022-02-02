@@ -6,18 +6,18 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ListDateTimeConverter implements DynamoDBTypeConverter<String, List<ZonedDateTime>> {
     private static DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
 
     @Override
     public String convert(List<ZonedDateTime> zonedDateTime) {
-        StringBuilder sb = new StringBuilder();
-        zonedDateTime.forEach(zone -> {
-            sb.append(format.format(zone))
-                    .append(";");
-        });
-        return sb.toString();
+        return String.join(";",
+                zonedDateTime.stream()
+                        .map(zone -> format.format(zone))
+                        .collect(Collectors.toList())
+        );
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import me.travja.performances.api.AuditionRequestHandler;
 import me.travja.performances.api.Util;
+import me.travja.performances.api.models.LambdaRequest;
 import me.travja.performances.api.models.Person;
 import me.travja.performances.processor.LambdaController;
 
@@ -13,6 +14,23 @@ import java.util.*;
 @LambdaController
 public class AuthorizationHandler extends AuditionRequestHandler {
 
+    @Override
+    public void postConstruct() {
+        super.postConstruct();
+        clearCacheOnNewRequest = false;
+    }
+
+    @Override
+    public Map<String, Object> handleRequest(LambdaRequest request, Context context,
+                                             String[] path) {
+        String authHeader = getAuthHeader(request).replace("Basic ", "");
+        Person authUser   = request.getAuthUser();
+        if (authHeader == null) return constructResponse(401);
+        boolean authorized = authUser != null ? checkAuth(authHeader, authUser) : false;
+        System.out.println("Passwords match? " + authorized);
+        return constructAuthResponse(authorized, request.getString("methodArn"));
+    }
+
     public boolean checkAuth(String auth, Person authUser) {
         String[] b64  = new String(Base64.getDecoder().decode(auth)).split(":", 2);
         String   pass = b64[1];
@@ -20,16 +38,6 @@ public class AuthorizationHandler extends AuditionRequestHandler {
         System.out.println("Auth user is " + authUser.getName());
 
         return Util.checkHash(pass, authUser.getPassword());
-    }
-
-    @Override
-    public Map<String, Object> handleRequest(Map<String, Object> event, Context context,
-                                             Person authUser, String[] path) {
-        String authHeader = getAuthHeader(event).replace("Basic ", "");
-        if (authHeader == null) return constructResponse(401);
-        boolean authorized = authUser != null ? checkAuth(authHeader, authUser) : false;
-        System.out.println("Passwords match? " + authorized);
-        return constructAuthResponse(authorized, (String) event.get("methodArn"));
     }
 
     public Map<String, Object> constructAuthResponse(boolean authorized, String arn) {

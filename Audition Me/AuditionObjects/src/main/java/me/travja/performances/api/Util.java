@@ -87,4 +87,12 @@ public class Util {
         return BCrypt.checkpw(pass, hash);
     }
 
+    public static void printStack(StackTraceElement[] stack) {
+        for (int i = 1; i < stack.length; i++) {
+            StackTraceElement s = stack[i];
+            System.out.println("\tat " + s.getClassName() + "." + s.getMethodName()
+                    + "(" + s.getFileName() + ":" + s.getLineNumber() + ")");
+        }
+    }
+
 }

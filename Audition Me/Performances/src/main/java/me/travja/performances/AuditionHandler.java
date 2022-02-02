@@ -1,18 +1,13 @@
 package me.travja.performances;
 
 import me.travja.performances.api.AuditionRequestHandler;
-import me.travja.performances.api.StateManager;
-import me.travja.performances.api.models.Audition;
-import me.travja.performances.api.models.Performance;
-import me.travja.performances.api.models.Performer;
-import me.travja.performances.api.models.Person;
+import me.travja.performances.api.models.*;
 import me.travja.performances.processor.LambdaController;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import static me.travja.performances.api.Util.ensureExists;
 import static me.travja.performances.api.Util.sendEmail;
 
 // '/auditions' endpoint
@@ -20,10 +15,10 @@ import static me.travja.performances.api.Util.sendEmail;
 public class AuditionHandler extends AuditionRequestHandler {
 
     private static DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss O");
-    private final  StateManager      state  = StateManager.getInstance();
 
     @Override
-    public Map<String, Object> handleGet(Map<String, Object> event, String[] path, Person authUser) {
+    public Map<String, Object> handleGet(LambdaRequest request, String[] path) {
+        Person authUser = request.getAuthUser();
         if (authUser == null)
             return constructResponse(403, "message", "You don't have permission for this endpoint");
 
@@ -75,22 +70,24 @@ public class AuditionHandler extends AuditionRequestHandler {
     }
 
     @Override
-    public Map<String, Object> handlePost(Map<String, Object> event, String[] path, Person authUser) {
+    public Map<String, Object> handlePost(LambdaRequest request, String[] path) {
+        Person authUser = request.getAuthUser();
         if (!(authUser instanceof Performer))
             return constructResponse(403, "message", "You don't have permission for this endpoint");
 
-        ensureExists(event, "performanceId", "performerId", "date");
+        request.ensureExists("performanceId", "performerId", "date");
 
-        UUID performanceId = UUID.fromString(String.valueOf(event.get("performanceId")));
-        UUID performerId   = UUID.fromString(String.valueOf(event.get("performerId")));
+        UUID performanceId = request.getUUID("performanceId");
+        UUID performerId   = request.getUUID("performerId");
 
         Optional<Performance> perf = state.getPerformanceById(performanceId);
         Performance performance = perf.orElseThrow(() ->
                 new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
         Performer     performer = state.getPerformerById(performerId);
-        ZonedDateTime date      = ZonedDateTime.parse((String) event.get("date"), format);
+        ZonedDateTime date      = ZonedDateTime.parse(request.getString("date"), format);
 
         Audition audition = performance.scheduleAudition(performer, date);
+        state.save(performance);
         if (performance.getDirector() != null)
             sendEmail(performance.getDirector(), "Someone signed up for an audition!", performer.getId() + " has signed up to " +
                     "audition for performance " + performanceId);
@@ -102,17 +99,21 @@ public class AuditionHandler extends AuditionRequestHandler {
     }
 
     @Override
-    public Map<String, Object> handleDelete(Map<String, Object> event, String[] path, Person authUser) {
+    public Map<String, Object> handleDelete(LambdaRequest request, String[] path) {
+        Person authUser = request.getAuthUser();
         if (authUser == null)
             return constructResponse(403, "message", "You don't have permission for this endpoint");
-        ensureExists(event, "id", "auditionId");
+        request.ensureExists("id", "auditionId");
 
-        UUID performanceId = UUID.fromString(String.valueOf(event.get("id")));
+        UUID performanceId = request.getUUID("id");
+        UUID auditionId    = request.getUUID("auditionId");
 
         Optional<Performance> perf = state.getPerformanceById(performanceId);
         Performance performance = perf.orElseThrow(() ->
                 new NoSuchElementException("Performance with ID '" + performanceId + "' doesn't exist"));
-        performance.removeAudition(UUID.fromString(String.valueOf(event.get("auditionId"))));
+        state.deleteAudition(auditionId);
+        performance.removeAudition(auditionId);
+        state.save(performance);
         return constructResponse(200);
     }
 }

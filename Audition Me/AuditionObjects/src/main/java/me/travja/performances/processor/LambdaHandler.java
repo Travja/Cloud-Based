@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import me.travja.performances.api.AuditionRequestHandler;
 import me.travja.performances.api.StateManager;
 import me.travja.performances.api.Util;
+import me.travja.performances.api.models.LambdaRequest;
 import me.travja.performances.api.models.Person;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
@@ -98,7 +99,7 @@ public class LambdaHandler
                     else
                         event.putAll((Map<String, Object>) mapper.readValue((String) event.get("body"), Map.class));
                 }
-                return convert(handler.handleRequest(event, context, authUser, pathArray));
+                return convert(handler.handleRequest(new LambdaRequest(event, authUser), context, pathArray));
             } catch (IOException ioe) {
                 return convert(constructResponse(400, "errorMessage", "Hit IOException when converting body.",
                         "exception", ioe));
@@ -132,5 +133,6 @@ public class LambdaHandler
         Optional<Person> authUser = state.getByEmail(username, Person.class);
         return authUser.orElse(null);
     }
+
 
 }

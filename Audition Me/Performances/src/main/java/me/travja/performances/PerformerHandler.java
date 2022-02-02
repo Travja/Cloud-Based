@@ -2,8 +2,8 @@ package me.travja.performances;
 
 import me.travja.performances.api.AuditionRequestHandler;
 import me.travja.performances.api.StateManager;
+import me.travja.performances.api.models.LambdaRequest;
 import me.travja.performances.api.models.Performer;
-import me.travja.performances.api.models.Person;
 import me.travja.performances.processor.LambdaController;
 
 import java.util.Map;
@@ -13,10 +13,8 @@ import java.util.UUID;
 @LambdaController("performers")
 public class PerformerHandler extends AuditionRequestHandler {
 
-    private final StateManager state = StateManager.getInstance();
-
     @Override
-    public Map<String, Object> handleGet(Map<String, Object> event, String[] path, Person authUser) {
+    public Map<String, Object> handleGet(LambdaRequest request, String[] path) {
         String action = path.length == 0 ? "" : path[0].toLowerCase();
 
         if (action.equalsIgnoreCase("search")) {
