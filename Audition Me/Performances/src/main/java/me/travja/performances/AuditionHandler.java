@@ -31,7 +31,7 @@ public class AuditionHandler extends AuditionRequestHandler {
 
             UUID performanceId = UUID.fromString(path[1]);
             UUID performerId   = path.length >= 3 ? UUID.fromString(path[2]) : authUser.getId();
-            if (authUser instanceof Performer && performerId != authUser.getId())
+            if (authUser.getType().equals("Performer") && !performerId.equals(authUser.getId()))
                 return constructResponse(403, "message", "You don't have permission for this endpoint");
 
             Performer             performer   = state.getPerformerById(performerId);
@@ -72,7 +72,7 @@ public class AuditionHandler extends AuditionRequestHandler {
     @Override
     public Map<String, Object> handlePost(LambdaRequest request, String[] path) {
         Person authUser = request.getAuthUser();
-        if (!(authUser instanceof Performer))
+        if (!authUser.getType().equalsIgnoreCase("Performer"))
             return constructResponse(403, "message", "You don't have permission for this endpoint");
 
         request.ensureExists("performanceId", "performerId", "date");

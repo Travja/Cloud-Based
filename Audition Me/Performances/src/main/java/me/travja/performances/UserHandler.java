@@ -1,10 +1,7 @@
 package me.travja.performances;
 
 import me.travja.performances.api.AuditionRequestHandler;
-import me.travja.performances.api.models.CastingDirector;
-import me.travja.performances.api.models.Director;
-import me.travja.performances.api.models.LambdaRequest;
-import me.travja.performances.api.models.Person;
+import me.travja.performances.api.models.*;
 import me.travja.performances.processor.LambdaController;
 
 import java.util.Map;
@@ -32,7 +29,7 @@ public class UserHandler extends AuditionRequestHandler {
         else if (type.equalsIgnoreCase("Director"))
             person = new Director(name, email, phone, password);
         else
-            person = new Director(name, email, phone, password);
+            person = new Performer(name, email, phone, password);
 
         state.save(person);
 

@@ -128,6 +128,7 @@ public class StateManager {
     }
 
     public Performance save(Performance performance) throws ConditionalCheckFailedException {
+        performance.getCast().size();
         for (Audition audition : performance.getAuditionList()) {
             dynamo.save(audition);
         }

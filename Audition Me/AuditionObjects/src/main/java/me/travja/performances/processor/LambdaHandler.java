@@ -131,6 +131,7 @@ public class LambdaHandler
         String[]         b64      = new String(Base64.getDecoder().decode(authHeader.getBytes())).split(":", 2);
         String           username = b64[0];
         Optional<Person> authUser = state.getByEmail(username, Person.class);
+        System.out.println("Email '" + username + "' has " + authUser.isPresent());
         return authUser.orElse(null);
     }
 
